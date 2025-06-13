@@ -42,12 +42,15 @@ Before getting started, ensure you have the following tools installed:
 
 * Docker and Docker Compose
 * Node.js and npm (for WebSocket testing)
+* Golang (required for key generation script)
 * wscat (WebSocket client for testing)
 
 To install wscat:
 ```sh
 npm install -g wscat
 ```
+
+> Note: For key management, check out the key ring in the `keygen/` directory.
 
 ## Getting Started
 
