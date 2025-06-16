@@ -52,8 +52,6 @@ npm install -g wscat
 ```
 
 > **Note:** For key management, check out the key ring in the `keygen/` directory.
-> 
-> **Note for macOS users:** The `timeout` command is available as `gtimeout` after installing coreutils (`brew install coreutils`).
 
 ## Getting Started
 
