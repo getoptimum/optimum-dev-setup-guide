@@ -6,7 +6,7 @@ It demonstrates how partners can configure gateways and P2P nodes, and serves as
 
 ## Architecture
 
-!["Gateway-P2P Node Communication"](./docs/intro.png)
+!['Gateway-P2P Node Communication'](./docs/intro.png)
 
 ### How it works
 
@@ -16,7 +16,7 @@ It demonstrates how partners can configure gateways and P2P nodes, and serves as
 * P2P nodes form an RLNC-enhanced mesh network, forwarding messages via coded shards.
 * Messages propagate based on configurable thresholds and shard redundancy.
 
-important: Gateways are stateless and horizontally scalable. P2P nodes form a resilient gossip + RLNC mesh.
+**Important:** Gateways are stateless and horizontally scalable. P2P nodes form a resilient gossip + RLNC mesh.
 
 ## Purpose
 
@@ -51,7 +51,7 @@ To install wscat:
 npm install -g wscat
 ```
 
-> Note: For key management, check out the key ring in the `keygen/` directory.
+> **Note:** For key management, check out the key ring in the `keygen/` directory.
 
 ## Getting Started
 
@@ -81,7 +81,7 @@ Edit .env:
 BOOTSTRAP_PEER_ID=12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
 ```
 
-### 2 Launch the Sample Network
+### 2. Launch the Sample Network
 
 ```sh
 docker-compose up --build
@@ -89,34 +89,34 @@ docker-compose up --build
 
 #### Configuration
 
-There are defaults which are set to be used. but its important to know what each variables are doing.
+Default values are provided, but it's important to understand what each variable does.
 
-##### Gateways Variables
+##### Gateway Variables
 
 * `CLUSTER_ID`: Gateway instance ID
 * `GATEWAY_PORT`: Port on which the gateway serves REST/WebSocket API
 * `P2P_NODES`: Comma-separated list of gRPC sidecar endpoints (e.g., `host:port`)
 * `ENABLE_AUTH`: If true, JWT Auth0 is required; if false, API is open (local only) (default: false)
-* `LOG_LEVEL`: Log verbosity level (e.g.; `debug`)
+* `LOG_LEVEL`: Log verbosity level (e.g., `debug`)
 
-##### P2P Nodes
+##### P2P Node Variables
 
 * `CLUSTER_ID`: Logical ID of the node
-* `NODE_MODE`: `optimum` or `gossipsub` mode (it should be `optimum`)
+* `NODE_MODE`: `optimum` or `gossipsub` mode (should be `optimum`)
 * `SIDECAR_PORT`: gRPC bidirectional port to which gateways connect (default: `33212`)
-* `API_PORT`: HTTP port exposing internal node APIs (defaults: `9090`)
-* `IDENTITY_DIR`: Directory containing node identity (p2p.key) (here we need only for bootstrap node, each node has there own generate on start)
+* `API_PORT`: HTTP port exposing internal node APIs (default: `9090`)
+* `IDENTITY_DIR`: Directory containing node identity (p2p.key) (needed only for bootstrap node; each node generates its own on start)
 * `BOOTSTRAP_PEERS`: Comma-separated list of peer multiaddrs with /p2p/ ID for initial connection
-* `OPTIMUM_PORT` : Port used by the OptimumP2P (default: 7070)
+* `OPTIMUM_PORT`: Port used by the OptimumP2P (default: 7070)
 * `OPTIMUM_MAX_MSG_SIZE`: Max message size in bytes (default: `1048576` → 1MB)
 * `OPTIMUM_MESH_MIN`: Min number of mesh-connected peers (default: `3`)
-* `OPTIMUM_MESH_MAX` : Max number of mesh-connected peers (default: `12`)
+* `OPTIMUM_MESH_MAX`: Max number of mesh-connected peers (default: `12`)
 * `OPTIMUM_MESH_TARGET`: Target number of peers to connect to (default: `6`)
 * `OPTIMUM_SHARD_FACTOR`: Number of shards per message (default: 4)
 * `OPTIMUM_SHARD_MULT`: Shard size multiplier (default: 1.5)
 * `OPTIMUM_THRESHOLD`: Minimum % of shard redundancy before forwarding message (e.g., 0.75 = 75%)
 
-if you want to learn about mesh you can see how [Eth2 is using gossipsub](https://github.com/LeastAuthority/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub)
+If you want to learn about mesh, see how [Eth2 is using gossipsub](https://github.com/LeastAuthority/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub).
 
 ## Use Cases
 
@@ -127,16 +127,16 @@ You can use this stack to:
 * Simulate client/gateway/node interaction
 * Customize clustering, shard behavior, and thresholds
 
-## Ways of using it
+## Ways of Using It
 
-There are 2 possible ways of using it
+There are two main ways to use this setup:
 
-1. Gateway (which connects to all the p2p node and give you response based on threshold e.g.; (1-100%) node received the message or not)
-2. P2P nodes where you can interact with P2P node directly
+1. **Gateway:** Connects to all P2P nodes and provides responses based on a threshold (e.g., whether 1-100% of nodes have received the message).
+2. **P2P Nodes:** Interact directly with a P2P node.
 
 ## Gateway API
 
-Gateways provide the user-facing interface to the optimumP2P.
+Gateways provide the user-facing interface to OptimumP2P.
 
 ### Subscribe to Topic
 
@@ -153,7 +153,7 @@ curl -X POST http://localhost:8081/api/subscribe \
 * `client_id`: Used to identify the client across WebSocket sessions. Auth0 user_id recommended if JWT is used.
 * `threshold`: Forward message to this client only if X% of nodes have received it.
 
-here `client_id` is your `websocket connection identifier`, usually we use auth0 `user_id` to have a controlled environment but here you can use any random string and make sure to use the same string while making websocket connection to receive the message.
+Here, `client_id` is your WebSocket connection identifier. Usually, we use Auth0 `user_id` to have a controlled environment, but here you can use any random string. Make sure to use the same string when making the WebSocket connection to receive the message.
 
 ### WebSocket Connection
 
@@ -163,7 +163,7 @@ wscat -c "ws://localhost:8081/api/ws?client_id=your-client-id"
 
 This is how clients receive messages published to their subscribed topics.
 
-**important: websocket has limitations and because of that you may face unreliable delivery when publishing bursts. we will be giving gRPC connection in next update.**
+> **Important:** WebSocket has limitations, and you may experience unreliable delivery when publishing message bursts. A gRPC connection will be provided in a future update.
 
 ### Publish Message
 
@@ -192,7 +192,7 @@ This is useful for:
 sh ./script/p2p_client.sh localhost:33221 subscribe mytopic
 ```
 
-**important here localhost:33221 is `p2pnode-1` mapped port 33221:33212 in docker compose**
+> **Note:** Here, `localhost:33221` is the mapped port for `p2pnode-1` (33221:33212) in docker-compose.
 
 response
 
@@ -209,7 +209,7 @@ Received message: "random2"
 sh ./script/p2p_client.sh localhost:33222 publish mytopic random
 ```
 
-**important here localhost:33222 is `p2pnode-2` mapped port 33222:33212 in docker compose**
+> **Note:** Here, `localhost:33222` is the mapped port for `p2pnode-2` (33222:33212) in docker-compose.
 
 response
 
@@ -268,7 +268,7 @@ response:
 {"commit_hash":"6d3d086","version":""}
 ```
 
-### Developer Tools
+## Developer Tools
 
 You can use CLI for testing as well that connects to gateway
 
