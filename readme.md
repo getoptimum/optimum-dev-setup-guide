@@ -46,6 +46,7 @@ Before getting started, ensure you have the following tools installed:
 * wscat (WebSocket client for testing)
 
 To install wscat:
+
 ```sh
 npm install -g wscat
 ```
@@ -130,9 +131,8 @@ You can use this stack to:
 
 There are 2 possible ways of using it
 
-1. Use Gateway (which connects to all the p2p node and give you results based on threshold e.g.; (1-100%) node received it or not)
+1. Gateway (which connects to all the p2p node and give you response based on threshold e.g.; (1-100%) node received the message or not)
 2. P2P nodes where you can interact with P2P node directly
-**important Gateway**
 
 ## Gateway API
 
@@ -190,8 +190,7 @@ This is useful for:
 sh ./script/p2p_client.sh localhost:33221 subscribe mytopic
 ```
 
-**important localhost:33221 is `p2pnode-1` mapped port 33221:33212**
-**default: 33212 is a sidecar port**
+**important here localhost:33221 is `p2pnode-1` mapped port 33221:33212 in docker compose**
 
 response
 
@@ -207,6 +206,8 @@ Received message: "random2"
 ```sh
 sh ./script/p2p_client.sh localhost:33222 publish mytopic random
 ```
+
+**important here localhost:33222 is `p2pnode-2` mapped port 33222:33212 in docker compose**
 
 response
 
