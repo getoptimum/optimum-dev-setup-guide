@@ -36,6 +36,26 @@ This setup is not production-ready but is designed to:
 * .env-based dynamic peer identity setup
 * Optional Auth0 support (disabled by default)
 
+## Repository Structure
+
+```
+optimum-dev-setup-guide/
+├── keygen/                 # Key generation utilities
+│   └── generate_p2p_key.go # P2P key generation implementation
+├── p2p_client/            # P2P client implementation
+│   ├── grpc/              # gRPC implementation
+│   │   ├── proto/         # Protocol buffer definitions
+│   │   │   └── stream.pb.go    # Generated protobuf code
+│   │   ├── stream.pb.go        # Generated protobuf message types
+│   │   └── stream_grpc.pb.go   # Generated gRPC service definitions
+│   └── p2p_client.go      # Main P2P client implementation
+├── script/                # Utility scripts
+│   ├── p2p_client.sh     # P2P client setup script
+│   └── generate_p2p_key.sh # Key generation script
+├── docker-compose.yml     # Docker compose configuration
+└── test_suite.sh         # Test suite script
+```
+
 ## Prerequisites
 
 Before getting started, ensure you have the following tools installed:
