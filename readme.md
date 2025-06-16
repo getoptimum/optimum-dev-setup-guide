@@ -36,6 +36,22 @@ This setup is not production-ready but is designed to:
 * .env-based dynamic peer identity setup
 * Optional Auth0 support (disabled by default)
 
+## Prerequisites
+
+Before getting started, ensure you have the following tools installed:
+
+* Docker and Docker Compose
+* Node.js and npm (for WebSocket testing)
+* Golang (required for key generation script)
+* wscat (WebSocket client for testing)
+
+To install wscat:
+```sh
+npm install -g wscat
+```
+
+> Note: For key management, check out the key ring in the `keygen/` directory.
+
 ## Getting Started
 
 ### 1. Generate Bootstrap Peer Identity
