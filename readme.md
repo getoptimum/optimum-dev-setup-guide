@@ -110,6 +110,14 @@ You can use this stack to:
 * Simulate client/gateway/node interaction
 * Customize clustering, shard behavior, and thresholds
 
+## Ways of using it
+
+There are 2 possible ways of using it
+
+1. Use Gateway (which connects to all the p2p node and give you results based on threshold e.g.; (1-100%) node received it or not)
+2. P2P nodes where you can interact with P2P node directly
+**important Gateway**
+
 ## Gateway API
 
 Gateways provide the user-facing interface to the optimumP2P.
@@ -149,6 +157,50 @@ curl -X POST http://localhost:8081/api/publish \
     "message": "Hello, world!"
   }'
 ```
+
+## Using P2P Nodes Directly (Optional – No Gateway)
+
+If you prefer to interact directly with the P2P mesh, bypassing the gateway, you can use a minimal client script to publish and subscribe directly over the gRPC sidecar interface of the nodes.
+
+This is useful for:
+
+* Low-level integration
+* Bypassing HTTP/WebSocket stack
+* Simulating internal services or embedded clients
+
+### Subscribe to a Topic
+
+```sh
+sh ./script/p2p_client.sh localhost:33221 subscribe mytopic
+```
+
+**important localhost:33221 is `p2pnode-1` mapped port 33221:33212**
+**default: 33212 is a sidecar port**
+
+response
+
+```sh
+Subscribed to topic "mytopic", waiting for messages…
+Received message: "random"
+Received message: "random1"
+Received message: "random2"
+```
+
+### Publish to a Topic
+
+```sh
+sh ./script/p2p_client.sh localhost:33222 publish mytopic random
+```
+
+response
+
+```sh
+Published "random" to "mytopic"
+```
+
+* --addr refers to the sidecar gRPC port exposed by the P2P node (e.g., 33221, 33222, etc.)
+* Messages published here will still follow RLNC encoding, mesh forwarding, and threshold policies
+* Gateway(s) will pick these up only if enough nodes receive the shards (threshold logic)
 
 ## Inspecting P2P Nodes
 
@@ -199,6 +251,6 @@ response:
 
 ### Developer Tools
 
-You can use CLI for testing as well
+You can use CLI for testing as well that connects to gateway
 
 See CLI guide: [mump2p-cli](https://github.com/getoptimum/mump2p-cli)
