@@ -163,6 +163,8 @@ wscat -c "ws://localhost:8081/api/ws?client_id=your-client-id"
 
 This is how clients receive messages published to their subscribed topics.
 
+**important: websocket has limitation to because of that you may face unreliable delivery when publishing bursts. we will be giving gRPC connection in next update.**
+
 ### Publish Message
 
 ```sh
