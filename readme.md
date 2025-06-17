@@ -191,10 +191,13 @@ This is how clients receive messages published to their subscribed topics.
 curl -X POST http://localhost:8081/api/publish \
   -H "Content-Type: application/json" \
   -d '{
+    "client_id": "your-client-id",
     "topic": "example-topic",
     "message": "Hello, world!"
   }'
 ```
+
+> **Important:** The `client_id` field is required for all publish requests. This should be the same ID used when subscribing to topics. If you're using WebSocket connections, use the same `client_id` for consistency.
 
 ## Using P2P Nodes Directly (Optional – No Gateway)
 
