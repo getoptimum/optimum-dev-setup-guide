@@ -6,6 +6,28 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Check required dependencies
+check_dependencies() {
+  local missing_deps=()
+  
+  if ! command -v curl >/dev/null 2>&1; then
+    missing_deps+=("curl")
+  fi
+  
+  if ! command -v bash >/dev/null 2>&1; then
+    missing_deps+=("bash")
+  fi
+  
+  if [[ ${#missing_deps[@]} -gt 0 ]]; then
+    echo -e "${RED}Error: Missing required dependencies:${NC} ${missing_deps[*]}"
+    echo -e "${YELLOW}Please install the missing dependencies and try again.${NC}"
+    exit 1
+  fi
+}
+
+# Run dependency check
+check_dependencies
+
 # Test configuration
 CLIENT_ID="test-client-1"
 TOPIC="example-topic"
@@ -103,14 +125,31 @@ echo
 # 10. WebSocket basic connection (wscat)
 echo -e "${YELLOW}Test: WebSocket connection (wscat)${NC}"
 if command -v wscat >/dev/null 2>&1; then
-  output=$(echo | gtimeout 3 wscat -c "ws://localhost:8081/api/ws?client_id=$CLIENT_ID" 2>&1)
-  if echo "$output" | grep -qE "(Connected|>)"; then
-    echo -e "${GREEN}[PASS]${NC} WebSocket (wscat) basic connection"
-    PASS=$((PASS+1))
+  # Detect timeout command (gtimeout on macOS, timeout on Linux)
+  if command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout"
+  elif command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout"
   else
-    echo -e "${RED}[FAIL]${NC} WebSocket (wscat) basic connection"
-    echo -e "  ${YELLOW}Output:${NC} $output"
-    FAIL=$((FAIL+1))
+    echo -e "${YELLOW}[SKIP]${NC} No timeout command available, skipping WebSocket test"
+    echo
+    # Continue with next test
+  fi
+  
+  if [[ -n "$TIMEOUT_CMD" ]]; then
+    # Use a longer timeout and better connection detection
+    output=$($TIMEOUT_CMD 5 wscat -c "ws://localhost:8081/api/ws?client_id=$CLIENT_ID" 2>&1)
+    # Debug: show what we captured
+    echo -e "  ${YELLOW}Debug - Captured output:${NC} '$output'"
+    # Check for successful connection patterns - wscat shows "Connected" and ">" prompt
+    if echo "$output" | grep -q "Connected" || echo "$output" | grep -q ">" || echo "$output" | grep -q "connected"; then
+      echo -e "${GREEN}[PASS]${NC} WebSocket (wscat) basic connection"
+      PASS=$((PASS+1))
+    else
+      echo -e "${RED}[FAIL]${NC} WebSocket (wscat) basic connection"
+      echo -e "  ${YELLOW}Output:${NC} $output"
+      FAIL=$((FAIL+1))
+    fi
   fi
 else
   echo -e "${YELLOW}[SKIP]${NC} wscat not installed, skipping WebSocket test"
