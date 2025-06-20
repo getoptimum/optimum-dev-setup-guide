@@ -67,11 +67,4 @@ fi
 echo ""
 
 echo -e "${YELLOW}=== Summary ===${NC}"
-echo "The gRPC keepalive fix has been successfully implemented:"
-echo "✅ Increased default ping interval from 30s to 2m"
-echo "✅ Added configurable keepalive parameters"
-echo "✅ Improved error handling for keepalive issues"
-echo "✅ Updated script to support keepalive options"
-echo "✅ Added comprehensive documentation"
-echo ""
-echo -e "${GREEN}All tests passed! The 'too_many_pings' issue has been resolved.${NC}" 
+echo "The gRPC keepalive fix has been successfully implemented:" 
