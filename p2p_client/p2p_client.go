@@ -47,7 +47,7 @@ var (
 	message = flag.String("msg", "", "message data (for publish)")
 
 	// Keepalive configuration flags
-	keepaliveTime    = flag.Duration("keepalive-time", 2*time.Minute, "gRPC keepalive ping interval")
+	keepaliveTime    = flag.Duration("keepalive-internal", 2*time.Minute, "gRPC keepalive ping interval")
 	keepaliveTimeout = flag.Duration("keepalive-timeout", 20*time.Second, "gRPC keepalive ping timeout")
 )
 
