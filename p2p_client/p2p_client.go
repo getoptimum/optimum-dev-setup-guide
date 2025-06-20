@@ -10,11 +10,11 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
@@ -111,8 +111,8 @@ func main() {
 			if err != nil {
 				// Handle keepalive errors more gracefully
 				if st, ok := status.FromError(err); ok {
-                                     msg := st.Message()
-		                     if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
+					msg := st.Message()
+					if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
 						log.Printf("Connection closed due to keepalive ping limit. This indicates the server has stricter ping limits than expected.")
 						log.Printf("Consider adjusting keepalive settings or server configuration.")
 						return
