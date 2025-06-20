@@ -111,7 +111,8 @@ func main() {
 			if err != nil {
 				// Handle keepalive errors more gracefully
 				if st, ok := status.FromError(err); ok {
-					if st.Code() == codes.Unavailable && st.Message() == "closing transport due to: connection error: desc = \"error reading from server: EOF\", received prior goaway: code: ENHANCE_YOUR_CALM, debug data: \"too_many_pings\"" {
+                                     msg := st.Message()
+		                     if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
 						log.Printf("Connection closed due to keepalive ping limit. This indicates the server has stricter ping limits than expected.")
 						log.Printf("Consider adjusting keepalive settings or server configuration.")
 						return
