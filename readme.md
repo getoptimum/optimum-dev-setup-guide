@@ -42,26 +42,27 @@ This setup is not production-ready but is designed to:
 optimum-dev-setup-guide/
 ├── keygen/                 # Key generation utilities
 │   └── generate_p2p_key.go # P2P key generation implementation
-├── grpc_p2p_client/            # P2P client implementation
+├── grpc_p2p_client/        # P2P client implementation
 │   ├── grpc/              # gRPC implementation
 │   │   ├── p2p_stream.pb.go        # Generated protobuf message types
 │   │   └── p2p_stream_grpc.pb.go   # Generated gRPC service definitions
-│   │   ├── proto/         # Protocol buffer definitions
-│   │   │   └── p2p_stream.go    # protobuf code
-│   └── p2p_client.go      # Main P2P client implementation (sample)
-├── grpc_gateway_client/            # Gateway client implementation
+│   ├── proto/             # Protocol buffer definitions
+│   │   └── p2p_stream.proto        # P2P stream protocol definition
+│   └── p2p_client.go      # Main P2P client implementation
+├── grpc_gateway_client/    # Gateway client implementation
 │   ├── grpc/              # gRPC implementation
 │   │   ├── gateway_stream.pb.go        # Generated protobuf message types
 │   │   └── gateway_stream_grpc.pb.go   # Generated gRPC service definitions
-│   │   ├── proto/         # Protocol buffer definitions
-│   │   │   └── gateway_stream.go    # protobuf code
-│   └── p2p_client.go      # Main P2P client implementation (sample)
+│   ├── proto/             # Protocol buffer definitions
+│   │   └── gateway_stream.proto        # Gateway stream protocol definition
+│   └── gateway_client.go   # Main Gateway client implementation
 ├── script/                # Utility scripts
 │   ├── p2p_client.sh       # P2P client setup script
 │   ├── gateway_client.sh   # Gateway client setup script
 │   └── generate_p2p_key.sh # Key generation script
 ├── docker-compose.yml     # Docker compose configuration
-└── test_suite.sh         # Test suite script
+├── test_suite.sh         # Test suite script
+└── test_keepalive_fix.sh # gRPC keepalive testing script
 ```
 
 ## Prerequisites
