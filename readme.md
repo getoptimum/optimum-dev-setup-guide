@@ -289,16 +289,32 @@ go build -o gateway_client gateway_client.go
 
 ### Generated Protobuf Files
 
-The gRPC client uses auto-generated protobuf files:
-* `grpc/gateway_stream.pb.go`: Message type definitions
-* `grpc/gateway_stream_grpc.pb.go`: gRPC service definitions
+The gRPC clients use auto-generated protobuf files:
+
+**Gateway Client:**
+* `grpc_gateway_client/grpc/gateway_stream.pb.go`: Message type definitions
+* `grpc_gateway_client/grpc/gateway_stream_grpc.pb.go`: gRPC service definitions
+
+**P2P Client:**
+* `grpc_p2p_client/grpc/p2p_stream.pb.go`: Message type definitions
+* `grpc_p2p_client/grpc/p2p_stream_grpc.pb.go`: gRPC service definitions
 
 To regenerate these files:
+
+**Gateway Client:**
 ```sh
 cd grpc_gateway_client
 protoc --go_out=. --go_opt=paths=source_relative \
        --go-grpc_out=. --go-grpc_opt=paths=source_relative \
        proto/gateway_stream.proto
+```
+
+**P2P Client:**
+```sh
+cd grpc_p2p_client
+protoc --go_out=. --go_opt=paths=source_relative \
+       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+       proto/p2p_stream.proto
 ```
 
 ## Using P2P Nodes Directly (Optional – No Gateway)
