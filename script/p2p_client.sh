@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-P2P_CLIENT_DIR="./p2p_client"
+P2P_CLIENT_DIR="./grpc_p2p_client"
 
 cd "$P2P_CLIENT_DIR"
 
-go build -o p2p-client ../p2p_client/p2p_client.go
+go build -o p2p-client ./p2p_client.go
 
 if [ -z "${1:-}" ]; then
   echo "Usage: $0 <addr> (subscribe <topic> [keepalive-options])|(publish <topic> <message> [keepalive-options])" >&2

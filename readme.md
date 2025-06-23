@@ -38,19 +38,27 @@ This setup is not production-ready but is designed to:
 
 ## Repository Structure
 
-```
+```sh
 optimum-dev-setup-guide/
 ├── keygen/                 # Key generation utilities
 │   └── generate_p2p_key.go # P2P key generation implementation
-├── p2p_client/            # P2P client implementation
+├── grpc_p2p_client/            # P2P client implementation
 │   ├── grpc/              # gRPC implementation
+│   │   ├── p2p_stream.pb.go        # Generated protobuf message types
+│   │   └── p2p_stream_grpc.pb.go   # Generated gRPC service definitions
 │   │   ├── proto/         # Protocol buffer definitions
-│   │   │   └── stream.pb.go    # Generated protobuf code
-│   │   ├── stream.pb.go        # Generated protobuf message types
-│   │   └── stream_grpc.pb.go   # Generated gRPC service definitions
-│   └── p2p_client.go      # Main P2P client implementation
+│   │   │   └── p2p_stream.go    # protobuf code
+│   └── p2p_client.go      # Main P2P client implementation (sample)
+├── grpc_gateway_client/            # Gateway client implementation
+│   ├── grpc/              # gRPC implementation
+│   │   ├── gateway_stream.pb.go        # Generated protobuf message types
+│   │   └── gateway_stream_grpc.pb.go   # Generated gRPC service definitions
+│   │   ├── proto/         # Protocol buffer definitions
+│   │   │   └── gateway_stream.go    # protobuf code
+│   └── p2p_client.go      # Main P2P client implementation (sample)
 ├── script/                # Utility scripts
-│   ├── p2p_client.sh     # P2P client setup script
+│   ├── p2p_client.sh       # P2P client setup script
+│   ├── gateway_client.sh   # Gateway client setup script
 │   └── generate_p2p_key.sh # Key generation script
 ├── docker-compose.yml     # Docker compose configuration
 └── test_suite.sh         # Test suite script
@@ -199,6 +207,35 @@ curl -X POST http://localhost:8081/api/publish \
 
 > **Important:** The `client_id` field is required for all publish requests. This should be the same ID used when subscribing to topics. If you're using WebSocket connections, use the same `client_id` for consistency.
 
+## Gateway gRPC Streaming
+
+Clients can use gRPC to stream messages from the Gateway.
+
+Protobuf: `gateway_stream.proto`
+
+```proto
+service GatewayStream {
+  rpc ClientStream (stream GatewayMessage) returns (stream GatewayMessage);
+}
+
+message GatewayMessage {
+  string client_id = 1;
+  string topic = 2;
+  bytes message = 3;
+}
+```
+
+* Bidirectional streaming.
+* First message must include only client_id.
+* All subsequent messages are sent by Gateway on subscribed topics.
+
+### Example
+
+```sh
+sh ./script/gateway_client.sh subscribe mytopic 0.7
+sh ./script/gateway_client.sh publish mytopic 0.6 10
+```
+
 ## Using P2P Nodes Directly (Optional – No Gateway)
 
 If you prefer to interact directly with the P2P mesh, bypassing the gateway, you can use a minimal client script to publish and subscribe directly over the gRPC sidecar interface of the nodes.
@@ -209,7 +246,9 @@ This is useful for:
 * Bypassing HTTP/WebSocket stack
 * Simulating internal services or embedded clients
 
-### Subscribe to a Topic
+### Example (sample implementation)
+
+#### Subscribe to a Topic
 
 ```sh
 sh ./script/p2p_client.sh localhost:33221 subscribe mytopic
@@ -226,7 +265,7 @@ Received message: "random1"
 Received message: "random2"
 ```
 
-### Publish to a Topic
+#### Publish to a Topic
 
 ```sh
 sh ./script/p2p_client.sh localhost:33222 publish mytopic random
@@ -251,9 +290,10 @@ The P2P client has been updated to handle gRPC keepalive settings properly to av
 ### Default Settings
 
 The client now uses these improved default keepalive settings:
-- **Ping Interval**: 2 minutes (instead of 30 seconds)
-- **Ping Timeout**: 20 seconds
-- **Permit Without Stream**: true
+
+* **Ping Interval**: 2 minutes (instead of 30 seconds)
+* **Ping Timeout**: 20 seconds
+* **Permit Without Stream**: true
 
 ### Customizing Keepalive Settings
 
@@ -272,8 +312,8 @@ You can customize the keepalive behavior using command-line flags:
 
 ### Available Keepalive Flags
 
-- `-keepalive-time`: gRPC keepalive ping interval (default: 2m0s)
-- `-keepalive-timeout`: gRPC keepalive ping timeout (default: 20s)
+* `-keepalive-time`: gRPC keepalive ping interval (default: 2m0s)
+* `-keepalive-timeout`: gRPC keepalive ping timeout (default: 20s)
 
 ### Troubleshooting Keepalive Issues
 
