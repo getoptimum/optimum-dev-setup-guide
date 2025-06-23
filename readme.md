@@ -220,8 +220,10 @@ service GatewayStream {
 
 message GatewayMessage {
   string client_id = 1;
-  string topic = 2;
-  bytes message = 3;
+  bytes message = 2;
+  string topic = 3;
+  string message_id = 4;
+  string type = 5; 
 }
 ```
 
@@ -234,6 +236,68 @@ message GatewayMessage {
 ```sh
 sh ./script/gateway_client.sh subscribe mytopic 0.7
 sh ./script/gateway_client.sh publish mytopic 0.6 10
+```
+
+## gRPC Gateway Client Implementation
+
+A new Go-based gRPC client implementation is available in `grpc_gateway_client/gateway_client.go` that provides:
+
+### Features
+
+* **Bidirectional gRPC Streaming**: Establishes persistent connection with the gateway
+* **REST API Integration**: Uses REST for subscription and publishing
+* **Automatic Client ID Generation**: Generates unique client identifiers
+* **Configurable Keepalive**: Optimized gRPC keepalive settings
+* **Message Publishing Loop**: Automated message publishing with configurable delays
+* **Signal Handling**: Graceful shutdown on interrupt
+
+### Usage
+
+```sh
+# Build the client
+cd grpc_gateway_client
+go build -o gateway_client gateway_client.go
+
+# Subscribe only (receive messages)
+./gateway_client -subscribeOnly -topic=test -threshold=0.7
+
+# Subscribe and publish messages
+./gateway_client -topic=test -threshold=0.7 -count=10 -delay=2s
+
+# Custom keepalive settings
+./gateway_client -topic=test -keepalive-interval=5m -keepalive-timeout=30s
+```
+
+### Command Line Flags
+
+* `-topic`: Topic name to subscribe/publish (default: "demo")
+* `-threshold`: Delivery threshold 0.0 to 1.0 (default: 0.1)
+* `-subscribeOnly`: Only subscribe and receive messages
+* `-count`: Number of messages to publish (default: 5)
+* `-delay`: Delay between message publishing (default: 2s)
+* `-keepalive-interval`: gRPC keepalive interval (default: 2m)
+* `-keepalive-timeout`: gRPC keepalive timeout (default: 20s)
+
+### Protocol Flow
+
+1. **Subscription**: Client subscribes to topic via REST API
+2. **gRPC Connection**: Establishes bidirectional stream with gateway
+3. **Client ID Registration**: Sends client_id as first message
+4. **Message Reception**: Receives messages on subscribed topics
+5. **Message Publishing**: Publishes messages via REST API (optional)
+
+### Generated Protobuf Files
+
+The gRPC client uses auto-generated protobuf files:
+* `grpc/gateway_stream.pb.go`: Message type definitions
+* `grpc/gateway_stream_grpc.pb.go`: gRPC service definitions
+
+To regenerate these files:
+```sh
+cd grpc_gateway_client
+protoc --go_out=. --go_opt=paths=source_relative \
+       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+       proto/gateway_stream.proto
 ```
 
 ## Using P2P Nodes Directly (Optional – No Gateway)
