@@ -442,3 +442,37 @@ response:
 You can use CLI for testing as well that connects to gateway
 
 See CLI guide: [mump2p-cli](https://github.com/getoptimum/mump2p-cli)
+
+## Testing
+
+### Automated Test Suite
+
+Run the comprehensive test suite to validate API endpoints and edge cases:
+
+```sh
+./test_suite.sh
+```
+
+**What it tests:**
+- Gateway API endpoints (subscribe, publish, health, state, version)
+- Input validation (empty fields, invalid JSON)
+- Rapid request handling (5x publish test)
+- WebSocket connection (if wscat is installed)
+- Edge cases and error handling
+
+
+
+### gRPC Keepalive Testing
+
+Test the gRPC keepalive fix to ensure stable connections:
+
+```sh
+./test_keepalive_fix.sh
+```
+
+**What it tests:**
+- Default keepalive settings (2m interval)
+- Custom keepalive configurations (5m interval)
+- Script compatibility with keepalive flags
+- Publish functionality with keepalive settings
+
