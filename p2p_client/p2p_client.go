@@ -10,12 +10,14 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/status"
 
 	protobuf "p2p_client/grpc/proto"
 )
@@ -43,6 +45,10 @@ var (
 	mode    = flag.String("mode", "subscribe", "mode: subscribe | publish")
 	topic   = flag.String("topic", "", "topic name")
 	message = flag.String("msg", "", "message data (for publish)")
+
+	// Keepalive configuration flags
+	keepaliveTime    = flag.Duration("keepalive-internal", 2*time.Minute, "gRPC keepalive ping interval")
+	keepaliveTimeout = flag.Duration("keepalive-timeout", 20*time.Second, "gRPC keepalive ping timeout")
 )
 
 func main() {
@@ -51,7 +57,7 @@ func main() {
 		log.Fatalf("−topic is required")
 	}
 
-	// connect
+	// connect with improved keepalive settings to avoid "too_many_pings" error
 	conn, err := grpc.NewClient(*addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(
@@ -59,8 +65,9 @@ func main() {
 			grpc.MaxCallSendMsgSize(math.MaxInt),
 		),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:    30 * time.Second,
-			Timeout: 10 * time.Second,
+			Time:                *keepaliveTime,    // Configurable ping interval
+			Timeout:             *keepaliveTimeout, // Configurable ping timeout
+			PermitWithoutStream: true,              // Allow pings even without active streams
 		}))
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
@@ -102,6 +109,15 @@ func main() {
 				return
 			}
 			if err != nil {
+				// Handle keepalive errors more gracefully
+				if st, ok := status.FromError(err); ok {
+					msg := st.Message()
+					if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
+						log.Printf("Connection closed due to keepalive ping limit. This indicates the server has stricter ping limits than expected.")
+						log.Printf("Consider adjusting keepalive settings or server configuration.")
+						return
+					}
+				}
 				log.Fatalf("recv: %v", err)
 			}
 			handleResponse(resp)

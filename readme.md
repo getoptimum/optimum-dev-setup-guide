@@ -244,6 +244,47 @@ Published "random" to "mytopic"
 * Messages published here will still follow RLNC encoding, mesh forwarding, and threshold policies
 * Gateway(s) will pick these up only if enough nodes receive the shards (threshold logic)
 
+## gRPC Keepalive Configuration
+
+The P2P client has been updated to handle gRPC keepalive settings properly to avoid connection issues. The default settings have been optimized to prevent "too_many_pings" errors that can occur with aggressive keepalive configurations.
+
+### Default Settings
+
+The client now uses these improved default keepalive settings:
+- **Ping Interval**: 2 minutes (instead of 30 seconds)
+- **Ping Timeout**: 20 seconds
+- **Permit Without Stream**: true
+
+### Customizing Keepalive Settings
+
+You can customize the keepalive behavior using command-line flags:
+
+```sh
+# Use 5-minute ping intervals
+./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-time=5m
+
+# Use 10-second ping timeout
+./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-timeout=10s
+
+# Combine both settings
+./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-time=3m -keepalive-timeout=15s
+```
+
+### Available Keepalive Flags
+
+- `-keepalive-time`: gRPC keepalive ping interval (default: 2m0s)
+- `-keepalive-timeout`: gRPC keepalive ping timeout (default: 20s)
+
+### Troubleshooting Keepalive Issues
+
+If you encounter keepalive-related errors:
+
+1. **"too_many_pings" error**: Increase the `-keepalive-time` value
+2. **Connection timeouts**: Decrease the `-keepalive-timeout` value
+3. **Server compatibility**: Some servers have strict ping limits; use conservative settings
+
+The client now includes improved error handling for keepalive issues and will provide helpful diagnostic messages when such errors occur.
+
 ## Inspecting P2P Nodes
 
 ### Get Node Health
