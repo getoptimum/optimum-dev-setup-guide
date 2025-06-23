@@ -38,19 +38,27 @@ This setup is not production-ready but is designed to:
 
 ## Repository Structure
 
-```
+```sh
 optimum-dev-setup-guide/
 ├── keygen/                 # Key generation utilities
 │   └── generate_p2p_key.go # P2P key generation implementation
-├── p2p_client/            # P2P client implementation
+├── grpc_p2p_client/            # P2P client implementation
 │   ├── grpc/              # gRPC implementation
+│   │   ├── p2p_stream.pb.go        # Generated protobuf message types
+│   │   └── p2p_stream_grpc.pb.go   # Generated gRPC service definitions
 │   │   ├── proto/         # Protocol buffer definitions
-│   │   │   └── stream.pb.go    # Generated protobuf code
-│   │   ├── stream.pb.go        # Generated protobuf message types
-│   │   └── stream_grpc.pb.go   # Generated gRPC service definitions
-│   └── p2p_client.go      # Main P2P client implementation
+│   │   │   └── p2p_stream.go    # protobuf code
+│   └── p2p_client.go      # Main P2P client implementation (sample)
+├── grpc_gateway_client/            # Gateway client implementation
+│   ├── grpc/              # gRPC implementation
+│   │   ├── gateway_stream.pb.go        # Generated protobuf message types
+│   │   └── gateway_stream_grpc.pb.go   # Generated gRPC service definitions
+│   │   ├── proto/         # Protocol buffer definitions
+│   │   │   └── gateway_stream.go    # protobuf code
+│   └── p2p_client.go      # Main P2P client implementation (sample)
 ├── script/                # Utility scripts
-│   ├── p2p_client.sh     # P2P client setup script
+│   ├── p2p_client.sh       # P2P client setup script
+│   ├── gateway_client.sh   # Gateway client setup script
 │   └── generate_p2p_key.sh # Key generation script
 ├── docker-compose.yml     # Docker compose configuration
 └── test_suite.sh         # Test suite script
@@ -199,6 +207,99 @@ curl -X POST http://localhost:8081/api/publish \
 
 > **Important:** The `client_id` field is required for all publish requests. This should be the same ID used when subscribing to topics. If you're using WebSocket connections, use the same `client_id` for consistency.
 
+## Gateway gRPC Streaming
+
+Clients can use gRPC to stream messages from the Gateway.
+
+Protobuf: `gateway_stream.proto`
+
+```proto
+service GatewayStream {
+  rpc ClientStream (stream GatewayMessage) returns (stream GatewayMessage);
+}
+
+message GatewayMessage {
+  string client_id = 1;
+  bytes message = 2;
+  string topic = 3;
+  string message_id = 4;
+  string type = 5; 
+}
+```
+
+* Bidirectional streaming.
+* First message must include only client_id.
+* All subsequent messages are sent by Gateway on subscribed topics.
+
+### Example
+
+```sh
+sh ./script/gateway_client.sh subscribe mytopic 0.7
+sh ./script/gateway_client.sh publish mytopic 0.6 10
+```
+
+## gRPC Gateway Client Implementation
+
+A new Go-based gRPC client implementation is available in `grpc_gateway_client/gateway_client.go` that provides:
+
+### Features
+
+* **Bidirectional gRPC Streaming**: Establishes persistent connection with the gateway
+* **REST API Integration**: Uses REST for subscription and publishing
+* **Automatic Client ID Generation**: Generates unique client identifiers
+* **Configurable Keepalive**: Optimized gRPC keepalive settings
+* **Message Publishing Loop**: Automated message publishing with configurable delays
+* **Signal Handling**: Graceful shutdown on interrupt
+
+### Usage
+
+```sh
+# Build the client
+cd grpc_gateway_client
+go build -o gateway_client gateway_client.go
+
+# Subscribe only (receive messages)
+./gateway_client -subscribeOnly -topic=test -threshold=0.7
+
+# Subscribe and publish messages
+./gateway_client -topic=test -threshold=0.7 -count=10 -delay=2s
+
+# Custom keepalive settings
+./gateway_client -topic=test -keepalive-interval=5m -keepalive-timeout=30s
+```
+
+### Command Line Flags
+
+* `-topic`: Topic name to subscribe/publish (default: "demo")
+* `-threshold`: Delivery threshold 0.0 to 1.0 (default: 0.1)
+* `-subscribeOnly`: Only subscribe and receive messages
+* `-count`: Number of messages to publish (default: 5)
+* `-delay`: Delay between message publishing (default: 2s)
+* `-keepalive-interval`: gRPC keepalive interval (default: 2m)
+* `-keepalive-timeout`: gRPC keepalive timeout (default: 20s)
+
+### Protocol Flow
+
+1. **Subscription**: Client subscribes to topic via REST API
+2. **gRPC Connection**: Establishes bidirectional stream with gateway
+3. **Client ID Registration**: Sends client_id as first message
+4. **Message Reception**: Receives messages on subscribed topics
+5. **Message Publishing**: Publishes messages via REST API (optional)
+
+### Generated Protobuf Files
+
+The gRPC client uses auto-generated protobuf files:
+* `grpc/gateway_stream.pb.go`: Message type definitions
+* `grpc/gateway_stream_grpc.pb.go`: gRPC service definitions
+
+To regenerate these files:
+```sh
+cd grpc_gateway_client
+protoc --go_out=. --go_opt=paths=source_relative \
+       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+       proto/gateway_stream.proto
+```
+
 ## Using P2P Nodes Directly (Optional – No Gateway)
 
 If you prefer to interact directly with the P2P mesh, bypassing the gateway, you can use a minimal client script to publish and subscribe directly over the gRPC sidecar interface of the nodes.
@@ -209,7 +310,9 @@ This is useful for:
 * Bypassing HTTP/WebSocket stack
 * Simulating internal services or embedded clients
 
-### Subscribe to a Topic
+### Example (sample implementation)
+
+#### Subscribe to a Topic
 
 ```sh
 sh ./script/p2p_client.sh localhost:33221 subscribe mytopic
@@ -226,7 +329,7 @@ Received message: "random1"
 Received message: "random2"
 ```
 
-### Publish to a Topic
+#### Publish to a Topic
 
 ```sh
 sh ./script/p2p_client.sh localhost:33222 publish mytopic random
@@ -251,9 +354,10 @@ The P2P client has been updated to handle gRPC keepalive settings properly to av
 ### Default Settings
 
 The client now uses these improved default keepalive settings:
-- **Ping Interval**: 2 minutes (instead of 30 seconds)
-- **Ping Timeout**: 20 seconds
-- **Permit Without Stream**: true
+
+* **Ping Interval**: 2 minutes (instead of 30 seconds)
+* **Ping Timeout**: 20 seconds
+* **Permit Without Stream**: true
 
 ### Customizing Keepalive Settings
 
@@ -272,8 +376,8 @@ You can customize the keepalive behavior using command-line flags:
 
 ### Available Keepalive Flags
 
-- `-keepalive-time`: gRPC keepalive ping interval (default: 2m0s)
-- `-keepalive-timeout`: gRPC keepalive ping timeout (default: 20s)
+* `-keepalive-time`: gRPC keepalive ping interval (default: 2m0s)
+* `-keepalive-timeout`: gRPC keepalive ping timeout (default: 20s)
 
 ### Troubleshooting Keepalive Issues
 

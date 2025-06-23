@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/status"
 
-	protobuf "p2p_client/grpc/proto"
+	protobuf "p2p_client/grpc"
 )
 
 // P2PMessage represents a message structure used in P2P communication

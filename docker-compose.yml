@@ -3,7 +3,8 @@ services:
     image: 'getoptimum/gateway:latest'
     platform: linux/amd64  
     ports:
-      - "8081:8080"
+      - "8081:8080" # HTTP Port for the gateway
+      - "50051:50051" # gRPC Port for the gateway
     environment:
       - GATEWAY_PORT=:8080
       - CLUSTER_ID=gateway-1
@@ -17,11 +18,13 @@ services:
       - p2pnode-1
       - p2pnode-2
       - p2pnode-3
+      - p2pnode-4
   gateway-2:
     image: 'getoptimum/gateway:latest'
     platform: linux/amd64
     ports:
-      - "8082:8080"
+      - "8082:8080" # HTTP Port for the gateway
+      - "50052:50051" # gRPC Port for the gateway
     environment:
       - GATEWAY_PORT=:8080
       - CLUSTER_ID=gateway-1
@@ -35,6 +38,7 @@ services:
       - p2pnode-1
       - p2pnode-2
       - p2pnode-3
+      - p2pnode-4
 
   p2pnode-1:
     image: 'getoptimum/p2pnode:latest'
