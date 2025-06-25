@@ -16,6 +16,8 @@ It demonstrates how partners can configure gateways and P2P nodes, and serves as
 * P2P nodes form an RLNC-enhanced mesh network, forwarding messages via coded shards.
 * Messages propagate based on configurable thresholds and shard redundancy.
 
+> **Note:** OptP2P refers to the main set of P2P nodes forming the core mesh network. The Gateway acts as a proxy, providing controlled and secure access to all P2P nodes for external clients and integrations (e.g., Matrix, collaboration tools, etc.). For native integrations or advanced use cases, you can interact directly with the P2P mesh, bypassing the Gateway for full flexibility and performance.
+
 **Important:** Gateways are stateless and horizontally scalable. P2P nodes form a resilient gossip + RLNC mesh.
 
 ## Purpose
@@ -240,6 +242,8 @@ sh ./script/gateway_client.sh publish mytopic 0.6 10
 ```
 
 ## gRPC Gateway Client Implementation
+
+> **Note:** The provided client code in `grpc_gateway_client/gateway_client.go` is a SAMPLE implementation intended for demonstration and testing purposes only. It is **not production-ready** and should not be used as-is in production environments. Please review, adapt, and harden the code according to your security, reliability, and operational requirements before any production use.
 
 A new Go-based gRPC client implementation is available in `grpc_gateway_client/gateway_client.go` that provides:
 
