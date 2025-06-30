@@ -50,7 +50,7 @@ var (
 	count   = flag.Int("count", 1, "number of times to send the message (for publish mode)")
 
 	// Keepalive configuration flags
-	keepaliveTime    = flag.Duration("keepalive-interval", 2*time.Minute, "gRPC keepalive ping interval")
+	keepaliveTime    = flag.Duration("keepalive-internal", 2*time.Minute, "gRPC keepalive ping interval")
 	keepaliveTimeout = flag.Duration("keepalive-timeout", 20*time.Second, "gRPC keepalive ping timeout")
 
 	// Flow control configuration
@@ -109,9 +109,9 @@ func (c *P2PClient) connect() error {
 			grpc.MaxCallSendMsgSize(math.MaxInt),
 		),
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                *keepaliveTime,
-			Timeout:             *keepaliveTimeout,
-			PermitWithoutStream: false, // Keepalive fix from previous issue
+			Time:                *keepaliveTime,    // Configurable ping interval
+			Timeout:             *keepaliveTimeout, // Configurable ping timeout
+			PermitWithoutStream: false,             // Disable pings without active streams to avoid "too_many_pings" error
 		}),
 		// Additional flow control settings
 		grpc.WithInitialWindowSize(1024*1024),     // 1MB initial window
