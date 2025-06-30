@@ -67,7 +67,7 @@ func main() {
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                *keepaliveTime,    // Configurable ping interval
 			Timeout:             *keepaliveTimeout, // Configurable ping timeout
-			PermitWithoutStream: true,              // Allow pings even without active streams
+			PermitWithoutStream: false,             // Disable pings without active streams to avoid "too_many_pings" error
 		}))
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
