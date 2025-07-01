@@ -38,6 +38,41 @@ This setup is not production-ready but is designed to:
 * .env-based dynamic peer identity setup
 * Optional Auth0 support (disabled by default)
 
+## gRPC Flow Control Issue & Solution
+
+> **Background:**
+> Previously, direct gRPC subscriptions to a P2P node would stop working due to the default gRPC receive window (64KB) filling up. This caused the server to block on `Send()` and eventually deadlock, especially under high-throughput or real-time streaming.
+
+**Solution:**
+The P2P client now sets the gRPC per-stream and connection-level receive buffer to 1GB:
+```go
+grpc.WithInitialWindowSize(1024 * 1024 * 1024),
+grpc.WithInitialConnWindowSize(1024 * 1024 * 1024),
+```
+This allows the subscriber to drain messages without stalling the sender, even under very high message volumes.
+
+**New CLI Flags:**
+- `-count` — Number of messages to publish (for stress testing)
+- `-sleep` — Delay between publishes (e.g., 100ms)
+- `-keepalive-interval` — gRPC keepalive ping interval (default: 2m)
+- `-keepalive-timeout` — gRPC keepalive ping timeout (default: 20s)
+
+---
+
+## Example: Stress Test with 10,000+ Messages
+
+```sh
+# Subscribe (in one terminal)
+sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic -keepalive-interval=1m
+
+# Publish 10,000 messages (in another terminal)
+sh ./script/p2p_client.sh 127.0.0.1:33221 publish my-topic "random" -count=10000 -sleep=100ms
+```
+
+You can now reliably test with 10,000, 50,000, or more messages without the subscriber stalling.
+
+---
+
 ## Repository Structure
 
 ```sh
@@ -386,29 +421,40 @@ You can customize the keepalive behavior using command-line flags:
 
 ```sh
 # Use 5-minute ping intervals
-./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-time=5m
+sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic -keepalive-interval=5m
 
 # Use 10-second ping timeout
-./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-timeout=10s
+sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic -keepalive-timeout=10s
 
 # Combine both settings
-./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-time=3m -keepalive-timeout=15s
+sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic -keepalive-interval=3m -keepalive-timeout=15s
 ```
 
 ### Available Keepalive Flags
 
-* `-keepalive-time`: gRPC keepalive ping interval (default: 2m0s)
+* `-keepalive-interval`: gRPC keepalive ping interval (default: 2m0s)
 * `-keepalive-timeout`: gRPC keepalive ping timeout (default: 20s)
 
-### Troubleshooting Keepalive Issues
+### Stress Testing Flags
+
+* `-count`: Number of messages to publish (default: 1)
+* `-sleep`: Delay between publishes (e.g., 100ms, 1s)
+
+### Example: High-Volume Publish
+
+```sh
+sh ./script/p2p_client.sh 127.0.0.1:33221 publish my-topic "random" -count=50000 -sleep=50ms
+```
+
+### Troubleshooting Keepalive & Flow Control Issues
 
 If you encounter keepalive-related errors:
 
-1. **"too_many_pings" error**: Increase the `-keepalive-time` value
+1. **"too_many_pings" error**: Increase the `-keepalive-interval` value
 2. **Connection timeouts**: Decrease the `-keepalive-timeout` value
 3. **Server compatibility**: Some servers have strict ping limits; use conservative settings
 
-The client now includes improved error handling for keepalive issues and will provide helpful diagnostic messages when such errors occur.
+If you encounter message stalls at high volume, ensure you are using the latest client with the gRPC window size fix (see above).
 
 ## Inspecting P2P Nodes
 
