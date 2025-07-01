@@ -421,13 +421,13 @@ You can customize the keepalive behavior using command-line flags:
 
 ```sh
 # Use 5-minute ping intervals
-sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic -keepalive-interval=5m
+./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-interval=5m
 
 # Use 10-second ping timeout
 sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic -keepalive-timeout=10s
 
 # Combine both settings
-sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic -keepalive-interval=3m -keepalive-timeout=15s
+./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-interval=3m -keepalive-timeout=15s
 ```
 
 ### Available Keepalive Flags
