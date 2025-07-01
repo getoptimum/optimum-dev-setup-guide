@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -46,8 +49,13 @@ var (
 	topic   = flag.String("topic", "", "topic name")
 	message = flag.String("msg", "", "message data (for publish)")
 
+	// optional: number of messages to publish (for stress testing or batch sending)
+	count = flag.Int("count", 1, "number of messages to publish (for publish mode)")
+	// optional: sleep duration between publishes
+	sleep = flag.Duration("sleep", 0, "optional delay between publishes (e.g., 1s, 500ms)")
+
 	// Keepalive configuration flags
-	keepaliveTime    = flag.Duration("keepalive-internal", 2*time.Minute, "gRPC keepalive ping interval")
+	keepaliveTime    = flag.Duration("keepalive-interval", 2*time.Minute, "gRPC keepalive ping interval")
 	keepaliveTimeout = flag.Duration("keepalive-timeout", 20*time.Second, "gRPC keepalive ping timeout")
 )
 
@@ -60,6 +68,8 @@ func main() {
 	// connect with improved keepalive settings to avoid "too_many_pings" error
 	conn, err := grpc.NewClient(*addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithInitialWindowSize(1024*1024*1024),
+		grpc.WithInitialConnWindowSize(1024*1024*1024),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt),
 			grpc.MaxCallSendMsgSize(math.MaxInt),
@@ -72,6 +82,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
 	}
+	defer conn.Close()
 
 	client := protobuf.NewCommandStreamClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -102,57 +113,100 @@ func main() {
 			log.Fatalf("send subscribe: %v", err)
 		}
 		fmt.Printf("Subscribed to topic %q, waiting for messages…\n", *topic)
-		for {
-			resp, err := stream.Recv()
-			if err == io.EOF {
-				log.Println("stream closed by server")
-				return
-			}
-			if err != nil {
-				// Handle keepalive errors more gracefully
-				if st, ok := status.FromError(err); ok {
-					msg := st.Message()
-					if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
-						log.Printf("Connection closed due to keepalive ping limit. This indicates the server has stricter ping limits than expected.")
-						log.Printf("Consider adjusting keepalive settings or server configuration.")
-						return
-					}
+
+		var receivedCount int32
+		msgChan := make(chan *protobuf.Response, 10000)
+
+		// recv goroutine
+		go func() {
+			for {
+				resp, err := stream.Recv()
+				if err == io.EOF {
+					close(msgChan)
+					return
 				}
-				log.Fatalf("recv: %v", err)
+				if err != nil {
+					if st, ok := status.FromError(err); ok {
+						msg := st.Message()
+						if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
+							log.Printf("Connection closed due to keepalive ping limit. Server may have strict ping config.")
+							close(msgChan)
+							return
+						}
+					}
+					log.Printf("recv error: %v", err)
+					close(msgChan)
+					return
+				}
+				msgChan <- resp
 			}
-			handleResponse(resp)
+		}()
+
+		// message handler loop
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("Context canceled. Total messages received: %d", atomic.LoadInt32(&receivedCount))
+				return
+			case resp, ok := <-msgChan:
+				if !ok {
+					log.Printf("Stream closed. Total messages received: %d", atomic.LoadInt32(&receivedCount))
+					return
+				}
+				go func(resp *protobuf.Response) {
+					handleResponse(resp, &receivedCount)
+				}(resp)
+			}
 		}
 
 	case "publish":
-		if *message == "" {
+		if *message == "" && *count == 1 {
 			log.Fatalf("−msg is required in publish mode")
 		}
-		pubReq := &protobuf.Request{
-			Command: int32(CommandPublishData),
-			Topic:   *topic,
-			Data:    []byte(*message),
+		for i := 0; i < *count; i++ {
+			var data []byte
+			if *count == 1 {
+				data = []byte(*message)
+			} else {
+				// generate secure random 4-byte hex
+				randomBytes := make([]byte, 4)
+				if _, err := rand.Read(randomBytes); err != nil {
+					log.Fatalf("failed to generate random bytes: %v", err)
+				}
+				randomSuffix := hex.EncodeToString(randomBytes)
+				data = []byte(fmt.Sprintf("P2P message %d - %s", i+1, randomSuffix))
+			}
+
+			pubReq := &protobuf.Request{
+				Command: int32(CommandPublishData),
+				Topic:   *topic,
+				Data:    data,
+			}
+			if err := stream.Send(pubReq); err != nil {
+				log.Fatalf("send publish: %v", err)
+			}
+			fmt.Printf("Published %q to %q\n", string(data), *topic)
+
+			if *sleep > 0 {
+				time.Sleep(*sleep)
+			}
 		}
-		if err := stream.Send(pubReq); err != nil {
-			log.Fatalf("send publish: %v", err)
-		}
-		// graceful wait for ACK or just sleep briefly
-		fmt.Printf("Published %q to %q\n", *message, *topic)
-		time.Sleep(500 * time.Millisecond)
 
 	default:
 		log.Fatalf("unknown mode %q", *mode)
 	}
 }
 
-func handleResponse(resp *protobuf.Response) {
+func handleResponse(resp *protobuf.Response, counter *int32) {
 	switch resp.GetCommand() {
 	case protobuf.ResponseType_Message:
 		var p2pMessage P2PMessage
 		if err := json.Unmarshal(resp.GetData(), &p2pMessage); err != nil {
-			log.Fatalf("Error unmarshalling message %v", err)
+			log.Printf("Error unmarshalling message: %v", err)
 			return
 		}
-		fmt.Printf("Received message: %q\n", string(p2pMessage.Message))
+		n := atomic.AddInt32(counter, 1)
+		fmt.Printf("[%d] Received message: %q\n", n, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
 	case protobuf.ResponseType_Unknown:

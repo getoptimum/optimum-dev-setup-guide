@@ -386,13 +386,13 @@ You can customize the keepalive behavior using command-line flags:
 
 ```sh
 # Use 5-minute ping intervals
-./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-time=5m
+./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-interval=5m
 
 # Use 10-second ping timeout
 ./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-timeout=10s
 
 # Combine both settings
-./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-time=3m -keepalive-timeout=15s
+./p2p_client/p2p-client -mode=subscribe -topic=test --addr=127.0.0.1:33221 -keepalive-interval=3m -keepalive-timeout=15s
 ```
 
 ### Available Keepalive Flags
