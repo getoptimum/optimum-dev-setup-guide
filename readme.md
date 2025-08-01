@@ -1,30 +1,30 @@
 # OptimumP2P – Local Development Setup
 
-This repository provides a full-stack setup for running OptimumP2P, a high-performance RLNC-enhanced pubsub protocol, along with multiple gateways for scalable message routing.
+This repository provides a full-stack setup for running OptimumP2P, a high-performance RLNC-enhanced pubsub protocol, along with multiple proxies for scalable message routing.
 This repository provides a sample Docker Compose setup for deploying the OptimumP2P messaging infrastructure locally.
-It demonstrates how partners can configure gateways and P2P nodes, and serves as a reference architecture for integration, testing, and scaling into production.
+It demonstrates how partners can configure proxies and P2P nodes, and serves as a reference architecture for integration, testing, and scaling into production.
 
 ## Architecture
 
-!['Gateway-P2P Node Communication'](./docs/intro.png)
+!['Proxy-P2P Node Communication'](./docs/intro.png)
 
 ### How it works
 
-* Clients (like CLI, dApps, or backend services) interact with Gateways using REST/WebSocket.
-* Gateways handle user subscriptions, publish requests, and stream delivery.
-* Gateways connect to multiple P2P nodes via gRPC sidecar connections.
+* Clients (like CLI, dApps, or backend services) interact with Proxies using REST/WebSocket.
+* Proxies handle user subscriptions, publish requests, and stream delivery.
+* Proxies connect to multiple P2P nodes via gRPC sidecar connections.
 * P2P nodes form an RLNC-enhanced mesh network, forwarding messages via coded shards.
 * Messages propagate based on configurable thresholds and shard redundancy.
 
-> **Note:** OptP2P refers to the main set of P2P nodes forming the core mesh network. The Gateway acts as a proxy, providing controlled and secure access to all P2P nodes for external clients and integrations (e.g., Matrix, collaboration tools, etc.). For native integrations or advanced use cases, you can interact directly with the P2P mesh, bypassing the Gateway for full flexibility and performance.
+> **Note:** OptP2P refers to the main set of P2P nodes forming the core mesh network. The Proxy acts as a proxy, providing controlled and secure access to all P2P nodes for external clients and integrations (e.g., Matrix, collaboration tools, etc.). For native integrations or advanced use cases, you can interact directly with the P2P mesh, bypassing the Proxy for full flexibility and performance.
 
-**Important:** Gateways are stateless and horizontally scalable. P2P nodes form a resilient gossip + RLNC mesh.
+**Important:** Proxies are stateless and horizontally scalable. P2P nodes form a resilient gossip + RLNC mesh.
 
 ## Purpose
 
 This setup is not production-ready but is designed to:
 
-* Show how to run multiple P2P nodes and gateways
+* Show how to run multiple P2P nodes and proxies
 * Demonstrate typical configuration options
 * Help partners bootstrap their own network using OptimumP2P
 
@@ -33,7 +33,7 @@ This setup is not production-ready but is designed to:
 ## What It Includes
 
 * 4 P2P Nodes running the OptimumP2P
-* 2 Gateways for client-facing APIs (HTTP/WebSocket)
+* 2 Proxies for client-facing APIs (HTTP/WebSocket)
 * Static IP overlay (optimum-network) for deterministic internal addressing
 * .env-based dynamic peer identity setup
 * Optional Auth0 support (disabled by default)
@@ -86,16 +86,16 @@ optimum-dev-setup-guide/
 │   ├── proto/             # Protocol buffer definitions
 │   │   └── p2p_stream.proto        # P2P stream protocol definition
 │   └── p2p_client.go      # Main P2P client implementation
-├── grpc_gateway_client/    # Gateway client implementation
+├── grpc_proxy_client/    # Proxy client implementation
 │   ├── grpc/              # gRPC implementation
-│   │   ├── gateway_stream.pb.go        # Generated protobuf message types
-│   │   └── gateway_stream_grpc.pb.go   # Generated gRPC service definitions
+│   │   ├── proxy_stream.pb.go        # Generated protobuf message types
+│   │   └── proxy_stream_grpc.pb.go   # Generated gRPC service definitions
 │   ├── proto/             # Protocol buffer definitions
-│   │   └── gateway_stream.proto        # Gateway stream protocol definition
-│   └── gateway_client.go   # Main Gateway client implementation
+│   │   └── proxy_stream.proto        # Proxy stream protocol definition
+│   └── proxy_client.go   # Main Proxy client implementation
 ├── script/                # Utility scripts
 │   ├── p2p_client.sh       # P2P client setup script
-│   ├── gateway_client.sh   # Gateway client setup script
+│   ├── proxy_client.sh   # Proxy client setup script
 │   └── generate_p2p_key.sh # Key generation script
 ├── docker-compose.yml     # Docker compose configuration
 ├── test_suite.sh         # Test suite script
@@ -157,10 +157,10 @@ docker-compose up --build
 
 Default values are provided, but it's important to understand what each variable does.
 
-##### Gateway Variables
+##### Proxy Variables
 
-* `CLUSTER_ID`: Gateway instance ID
-* `GATEWAY_PORT`: Port on which the gateway serves REST/WebSocket API
+* `CLUSTER_ID`: Proxy instance ID
+* `PROXY_PORT`: Port on which the proxy serves REST/WebSocket API
 * `P2P_NODES`: Comma-separated list of gRPC sidecar endpoints (e.g., `host:port`)
 * `ENABLE_AUTH`: If true, JWT Auth0 is required; if false, API is open (local only) (default: false)
 * `LOG_LEVEL`: Log verbosity level (e.g., `debug`)
@@ -169,7 +169,7 @@ Default values are provided, but it's important to understand what each variable
 
 * `CLUSTER_ID`: Logical ID of the node
 * `NODE_MODE`: `optimum` or `gossipsub` mode (should be `optimum`)
-* `SIDECAR_PORT`: gRPC bidirectional port to which gateways connect (default: `33212`)
+* `SIDECAR_PORT`: gRPC bidirectional port to which proxies connect (default: `33212`)
 * `API_PORT`: HTTP port exposing internal node APIs (default: `9090`)
 * `IDENTITY_DIR`: Directory containing node identity (p2p.key) (needed only for bootstrap node; each node generates its own on start)
 * `BOOTSTRAP_PEERS`: Comma-separated list of peer multiaddrs with /p2p/ ID for initial connection
@@ -190,19 +190,19 @@ You can use this stack to:
 
 * Run local tests with mump2p-cli
 * Validate publish/subscribe mechanics via REST or WebSocket
-* Simulate client/gateway/node interaction
+* Simulate client/proxy/node interaction
 * Customize clustering, shard behavior, and thresholds
 
 ## Ways of Using It
 
 There are two main ways to use this setup:
 
-1. **Gateway:** Connects to all P2P nodes and provides responses based on a threshold (e.g., whether 1-100% of nodes have received the message).
+1. **Proxy:** Connects to all P2P nodes and provides responses based on a threshold (e.g., whether 1-100% of nodes have received the message).
 2. **P2P Nodes:** Interact directly with a P2P node.
 
-## Gateway API
+## Proxy API
 
-Gateways provide the user-facing interface to OptimumP2P.
+Proxies provide the user-facing interface to OptimumP2P.
 
 ### Subscribe to Topic
 
@@ -245,18 +245,18 @@ curl -X POST http://localhost:8081/api/publish \
 
 > **Important:** The `client_id` field is required for all publish requests. This should be the same ID used when subscribing to topics. If you're using WebSocket connections, use the same `client_id` for consistency.
 
-## Gateway gRPC Streaming
+## Proxy gRPC Streaming
 
-Clients can use gRPC to stream messages from the Gateway.
+Clients can use gRPC to stream messages from the Proxy.
 
-Protobuf: `gateway_stream.proto`
+Protobuf: `proxy_stream.proto`
 
 ```proto
-service GatewayStream {
-  rpc ClientStream (stream GatewayMessage) returns (stream GatewayMessage);
+service ProxyStream {
+  rpc ClientStream (stream ProxyMessage) returns (stream ProxyMessage);
 }
 
-message GatewayMessage {
+message ProxyMessage {
   string client_id = 1;
   bytes message = 2;
   string topic = 3;
@@ -267,24 +267,24 @@ message GatewayMessage {
 
 * Bidirectional streaming.
 * First message must include only client_id.
-* All subsequent messages are sent by Gateway on subscribed topics.
+* All subsequent messages are sent by Proxy on subscribed topics.
 
 ### Example
 
 ```sh
-sh ./script/gateway_client.sh subscribe mytopic 0.7
-sh ./script/gateway_client.sh publish mytopic 0.6 10
+sh ./script/proxy_client.sh subscribe mytopic 0.7
+sh ./script/proxy_client.sh publish mytopic 0.6 10
 ```
 
-## gRPC Gateway Client Implementation
+## gRPC Proxy Client Implementation
 
-> **Note:** The provided client code in `grpc_gateway_client/gateway_client.go` is a SAMPLE implementation intended for demonstration and testing purposes only. It is **not production-ready** and should not be used as-is in production environments. Please review, adapt, and harden the code according to your security, reliability, and operational requirements before any production use.
+> **Note:** The provided client code in `grpc_proxy_client/proxy_client.go` is a SAMPLE implementation intended for demonstration and testing purposes only. It is **not production-ready** and should not be used as-is in production environments. Please review, adapt, and harden the code according to your security, reliability, and operational requirements before any production use.
 
-A new Go-based gRPC client implementation is available in `grpc_gateway_client/gateway_client.go` that provides:
+A new Go-based gRPC client implementation is available in `grpc_proxy_client/proxy_client.go` that provides:
 
 ### Features
 
-* **Bidirectional gRPC Streaming**: Establishes persistent connection with the gateway
+* **Bidirectional gRPC Streaming**: Establishes persistent connection with the proxy
 * **REST API Integration**: Uses REST for subscription and publishing
 * **Automatic Client ID Generation**: Generates unique client identifiers
 * **Configurable Keepalive**: Optimized gRPC keepalive settings
@@ -295,17 +295,17 @@ A new Go-based gRPC client implementation is available in `grpc_gateway_client/g
 
 ```sh
 # Build the client
-cd grpc_gateway_client
-go build -o gateway_client gateway_client.go
+cd grpc_proxy_client
+go build -o proxy_client proxy_client.go
 
 # Subscribe only (receive messages)
-./gateway_client -subscribeOnly -topic=test -threshold=0.7
+./proxy_client -subscribeOnly -topic=test -threshold=0.7
 
 # Subscribe and publish messages
-./gateway_client -topic=test -threshold=0.7 -count=10 -delay=2s
+./proxy_client -topic=test -threshold=0.7 -count=10 -delay=2s
 
 # Custom keepalive settings
-./gateway_client -topic=test -keepalive-interval=5m -keepalive-timeout=30s
+./proxy_client -topic=test -keepalive-interval=5m -keepalive-timeout=30s
 ```
 
 ### Command Line Flags
@@ -321,7 +321,7 @@ go build -o gateway_client gateway_client.go
 ### Protocol Flow
 
 1. **Subscription**: Client subscribes to topic via REST API
-2. **gRPC Connection**: Establishes bidirectional stream with gateway
+2. **gRPC Connection**: Establishes bidirectional stream with proxy
 3. **Client ID Registration**: Sends client_id as first message
 4. **Message Reception**: Receives messages on subscribed topics
 5. **Message Publishing**: Publishes messages via REST API (optional)
@@ -330,9 +330,9 @@ go build -o gateway_client gateway_client.go
 
 The gRPC clients use auto-generated protobuf files:
 
-**Gateway Client:**
-* `grpc_gateway_client/grpc/gateway_stream.pb.go`: Message type definitions
-* `grpc_gateway_client/grpc/gateway_stream_grpc.pb.go`: gRPC service definitions
+**Proxy Client:**
+* `grpc_proxy_client/grpc/proxy_stream.pb.go`: Message type definitions
+* `grpc_proxy_client/grpc/proxy_stream_grpc.pb.go`: gRPC service definitions
 
 **P2P Client:**
 * `grpc_p2p_client/grpc/p2p_stream.pb.go`: Message type definitions
@@ -340,12 +340,12 @@ The gRPC clients use auto-generated protobuf files:
 
 To regenerate these files:
 
-**Gateway Client:**
+**Proxy Client:**
 ```sh
-cd grpc_gateway_client
+cd grpc_proxy_client
 protoc --go_out=. --go_opt=paths=source_relative \
        --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-       proto/gateway_stream.proto
+       proto/proxy_stream.proto
 ```
 
 **P2P Client:**
@@ -356,9 +356,9 @@ protoc --go_out=. --go_opt=paths=source_relative \
        proto/p2p_stream.proto
 ```
 
-## Using P2P Nodes Directly (Optional – No Gateway)
+## Using P2P Nodes Directly (Optional – No Proxy)
 
-If you prefer to interact directly with the P2P mesh, bypassing the gateway, you can use a minimal client script to publish and subscribe directly over the gRPC sidecar interface of the nodes.
+If you prefer to interact directly with the P2P mesh, bypassing the proxy, you can use a minimal client script to publish and subscribe directly over the gRPC sidecar interface of the nodes.
 
 This is useful for:
 
@@ -401,7 +401,7 @@ Published "random" to "mytopic"
 
 * --addr refers to the sidecar gRPC port exposed by the P2P node (e.g., 33221, 33222, etc.)
 * Messages published here will still follow RLNC encoding, mesh forwarding, and threshold policies
-* Gateway(s) will pick these up only if enough nodes receive the shards (threshold logic)
+* Proxy(s) will pick these up only if enough nodes receive the shards (threshold logic)
 
 ## gRPC Keepalive Configuration
 
@@ -505,7 +505,7 @@ response:
 
 ## Developer Tools
 
-You can use CLI for testing as well that connects to gateway
+You can use CLI for testing as well that connects to proxy
 
 See CLI guide: [mump2p-cli](https://github.com/getoptimum/mump2p-cli)
 
@@ -520,7 +520,7 @@ Run the comprehensive test suite to validate API endpoints and edge cases:
 ```
 
 **What it tests:**
-- Gateway API endpoints (subscribe, publish, health, state, version)
+- Proxy API endpoints (subscribe, publish, health, state, version)
 - Input validation (empty fields, invalid JSON)
 - Rapid request handling (5x publish test)
 - WebSocket connection (if wscat is installed)
