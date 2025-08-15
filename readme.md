@@ -469,22 +469,22 @@ sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe your-topic
 You'll see trace logs in real-time like:
 ```
 Subscribed to topic "your-topic", waiting for messages…
-[TRACE] GossipSub trace received: {"event":"MessageDelivered","timestamp":"2024-01-15T10:30:45Z","latency_ms":15,"bandwidth_bytes":1024}
-[TRACE] OptimumP2P trace received: {"event":"ShardReceived","timestamp":"2024-01-15T10:30:46Z","shard_id":"abc123","redundancy":0.8}
+[TRACE] GossipSub trace received: [binary trace data]
+[TRACE] OptimumP2P trace received: [binary trace data]
 [1] Received message: "Hello World"
 ```
+
+**Note:** The trace data appears as binary/encoded format for performance optimization. This contains delivery latency, bandwidth usage, and shard redundancy metrics in an efficient binary format.
 
 ### Understanding Trace Data
 
 **GossipSub Traces**: Show traditional message delivery metrics
-- `MessageDelivered`: When a complete message is received via gossipsub
-- `MessageForwarded`: When a message is forwarded to other peers
 - Contains delivery latency and bandwidth metrics
+- Binary format for performance optimization
 
 **OptimumP2P Traces**: Show RLNC-enhanced delivery events  
-- `ShardReceived`: When individual coded shards arrive
-- `MessageReconstructed`: When enough shards arrive to reconstruct the message
 - Contains shard redundancy and RLNC performance data
+- Binary format for efficient transmission
 
 ### Experimental Use Cases
 
