@@ -8,21 +8,16 @@ cd "$P2P_CLIENT_DIR"
 go build -o p2p-client ./p2p_client.go
 
 if [ -z "${1:-}" ]; then
-  echo "Usage: $0 <addr> (subscribe <topic> [keepalive-options])|(publish <topic> <message|\"random\"> [count=N] [sleep=Xs] [keepalive-options])" >&2
+  echo "Usage: $0 <addr> (subscribe <topic>)|(publish <topic> <message|\"random\"> [count=N] [sleep=Xs])" >&2
   echo "" >&2
-  echo "Keepalive options:" >&2
-  echo "  -keepalive-interval=<duration>    gRPC keepalive ping interval (default: 2m0s)" >&2
-  echo "  -keepalive-timeout=<duration> gRPC keepalive ping timeout (default: 20s)" >&2
-  echo "" >&2
-  echo "Other options for publish:" >&2
+  echo "Options for publish:" >&2
   echo "  -count=<N>                    Number of messages to send (default: 1)" >&2
   echo "  -sleep=<duration>             Delay between messages (e.g., 500ms, 2s)" >&2
   echo "" >&2
   echo "Examples:" >&2
   echo "  $0 127.0.0.1:33221 subscribe test" >&2
-  echo "  $0 127.0.0.1:33221 subscribe test -keepalive-interval=5m" >&2
   echo "  $0 127.0.0.1:33221 publish test \"Hello World\"" >&2
-  echo "  $0 127.0.0.1:33221 publish test \"random\" -count=100 -sleep=200ms -keepalive-timeout=10s" >&2
+  echo "  $0 127.0.0.1:33221 publish test \"random\" -count=100 -sleep=200ms" >&2
   exit 1
 fi
 
@@ -32,7 +27,7 @@ shift
 case "${1:-}" in
   subscribe)
     if [ -z "${2:-}" ]; then
-      echo "Usage: $0 <addr> subscribe <topic> [keepalive-options]" >&2
+      echo "Usage: $0 <addr> subscribe <topic>" >&2
       exit 1
     fi
     TOPIC="$2"
@@ -41,7 +36,7 @@ case "${1:-}" in
     ;;
   publish)
     if [ -z "${2:-}" ] || [ -z "${3:-}" ]; then
-      echo "Usage: $0 <addr> publish <topic> <message|\"random\"> [count=N] [sleep=Xs] [keepalive-options]" >&2
+      echo "Usage: $0 <addr> publish <topic> <message|\"random\"> [count=N] [sleep=Xs]" >&2
       exit 1
     fi
     TOPIC="$2"
@@ -55,7 +50,7 @@ case "${1:-}" in
     fi
     ;;
   *)
-    echo "Usage: $0 <addr> (subscribe <topic> [keepalive-options])|(publish <topic> <message> [options])" >&2
+    echo "Usage: $0 <addr> (subscribe <topic>)|(publish <topic> <message> [options])" >&2
     exit 1
     ;;
 esac

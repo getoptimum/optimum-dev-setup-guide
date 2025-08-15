@@ -12,15 +12,12 @@ import (
 	"math"
 	"os"
 	"os/signal"
-	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/status"
 
 	protobuf "p2p_client/grpc"
 )
@@ -53,10 +50,6 @@ var (
 	count = flag.Int("count", 1, "number of messages to publish (for publish mode)")
 	// optional: sleep duration between publishes
 	sleep = flag.Duration("sleep", 0, "optional delay between publishes (e.g., 1s, 500ms)")
-
-	// Keepalive configuration flags
-	keepaliveTime    = flag.Duration("keepalive-interval", 2*time.Minute, "gRPC keepalive ping interval")
-	keepaliveTimeout = flag.Duration("keepalive-timeout", 20*time.Second, "gRPC keepalive ping timeout")
 )
 
 func main() {
@@ -65,20 +58,14 @@ func main() {
 		log.Fatalf("−topic is required")
 	}
 
-	// connect with improved keepalive settings to avoid "too_many_pings" error
+	// connect with simple gRPC settings
 	conn, err := grpc.NewClient(*addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithInitialWindowSize(1024*1024*1024),
-		grpc.WithInitialConnWindowSize(1024*1024*1024),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt),
 			grpc.MaxCallSendMsgSize(math.MaxInt),
 		),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                *keepaliveTime,    // Configurable ping interval
-			Timeout:             *keepaliveTimeout, // Configurable ping timeout
-			PermitWithoutStream: false,             // Disable pings without active streams to avoid "too_many_pings" error
-		}))
+	)
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
 	}
@@ -126,14 +113,6 @@ func main() {
 					return
 				}
 				if err != nil {
-					if st, ok := status.FromError(err); ok {
-						msg := st.Message()
-						if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
-							log.Printf("Connection closed due to keepalive ping limit. Server may have strict ping config.")
-							close(msgChan)
-							return
-						}
-					}
 					log.Printf("recv error: %v", err)
 					close(msgChan)
 					return
@@ -208,7 +187,9 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 		n := atomic.AddInt32(counter, 1)
 		fmt.Printf("[%d] Received message: %q\n", n, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
+		fmt.Printf("[TRACE] GossipSub trace received: %s\n", string(resp.GetData()))
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
+		fmt.Printf("[TRACE] OptimumP2P trace received: %s\n", string(resp.GetData()))
 	case protobuf.ResponseType_Unknown:
 	default:
 		log.Println("Unknown response command:", resp.GetCommand())
