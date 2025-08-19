@@ -12,15 +12,12 @@ import (
 	"math"
 	"os"
 	"os/signal"
-	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/status"
 
 	protobuf "p2p_client/grpc"
 )
@@ -31,6 +28,40 @@ type P2PMessage struct {
 	Topic        string // Topic name where the message was published
 	Message      []byte // Actual message data
 	SourceNodeID string // ID of the node that sent the message (we don't need it in future, it is just for debug purposes)
+}
+
+// TraceData represents structured trace information for analysis
+type TraceData struct {
+	Event          string    `json:"event"`
+	Timestamp      time.Time `json:"timestamp"`
+	MessageID      string    `json:"message_id,omitempty"`
+	Topic          string    `json:"topic,omitempty"`
+	NodeID         string    `json:"node_id,omitempty"`
+	LatencyMs      int       `json:"latency_ms,omitempty"`
+	BandwidthBytes int       `json:"bandwidth_bytes,omitempty"`
+	ShardID        string    `json:"shard_id,omitempty"`
+	ShardIndex     int       `json:"shard_index,omitempty"`
+	TotalShards    int       `json:"total_shards,omitempty"`
+	Redundancy     float64   `json:"redundancy,omitempty"`
+	Protocol       string    `json:"protocol,omitempty"`
+}
+
+// GossipSubTraceData represents GossipSub-specific trace information
+type GossipSubTraceData struct {
+	TraceData
+	PeerID         string `json:"peer_id,omitempty"`
+	MessageSize    int    `json:"message_size,omitempty"`
+	DeliveryStatus string `json:"delivery_status,omitempty"`
+	Hops           int    `json:"hops,omitempty"`
+}
+
+// OptimumP2PTraceData represents OptimumP2P-specific trace information
+type OptimumP2PTraceData struct {
+	TraceData
+	CodedShards        int     `json:"coded_shards,omitempty"`
+	ReceivedShards     int     `json:"received_shards,omitempty"`
+	ReconstructionTime int     `json:"reconstruction_time_ms,omitempty"`
+	Efficiency         float64 `json:"efficiency,omitempty"`
 }
 
 // Command possible operation that sidecar may perform with p2p node
@@ -53,10 +84,6 @@ var (
 	count = flag.Int("count", 1, "number of messages to publish (for publish mode)")
 	// optional: sleep duration between publishes
 	sleep = flag.Duration("sleep", 0, "optional delay between publishes (e.g., 1s, 500ms)")
-
-	// Keepalive configuration flags
-	keepaliveTime    = flag.Duration("keepalive-interval", 2*time.Minute, "gRPC keepalive ping interval")
-	keepaliveTimeout = flag.Duration("keepalive-timeout", 20*time.Second, "gRPC keepalive ping timeout")
 )
 
 func main() {
@@ -65,20 +92,14 @@ func main() {
 		log.Fatalf("−topic is required")
 	}
 
-	// connect with improved keepalive settings to avoid "too_many_pings" error
+	// connect with simple gRPC settings
 	conn, err := grpc.NewClient(*addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithInitialWindowSize(1024*1024*1024),
-		grpc.WithInitialConnWindowSize(1024*1024*1024),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt),
 			grpc.MaxCallSendMsgSize(math.MaxInt),
 		),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                *keepaliveTime,    // Configurable ping interval
-			Timeout:             *keepaliveTimeout, // Configurable ping timeout
-			PermitWithoutStream: false,             // Disable pings without active streams to avoid "too_many_pings" error
-		}))
+	)
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
 	}
@@ -126,14 +147,6 @@ func main() {
 					return
 				}
 				if err != nil {
-					if st, ok := status.FromError(err); ok {
-						msg := st.Message()
-						if strings.Contains(msg, "ENHANCE_YOUR_CALM") || strings.Contains(msg, "too_many_pings") {
-							log.Printf("Connection closed due to keepalive ping limit. Server may have strict ping config.")
-							close(msgChan)
-							return
-						}
-					}
 					log.Printf("recv error: %v", err)
 					close(msgChan)
 					return
@@ -208,9 +221,43 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 		n := atomic.AddInt32(counter, 1)
 		fmt.Printf("[%d] Received message: %q\n", n, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
+		handleGossipSubTrace(resp.GetData())
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
+		handleOptimumP2PTrace(resp.GetData())
 	case protobuf.ResponseType_Unknown:
 	default:
 		log.Println("Unknown response command:", resp.GetCommand())
+	}
+}
+
+// handleGossipSubTrace parses and displays GossipSub trace data
+func handleGossipSubTrace(data []byte) {
+	// The trace data is protobuf binary from libp2p-pubsub TraceEvent
+	// For now, display the raw binary data as this contains valuable metrics
+	// Future: Could unmarshal pb.TraceEvent if protobuf definitions are available
+	fmt.Printf("[TRACE] GossipSub trace received (protobuf binary): %d bytes\n", len(data))
+
+	// Try to parse as JSON for structured trace data (fallback/future compatibility)
+	var gossipSubTrace GossipSubTraceData
+	if err := json.Unmarshal(data, &gossipSubTrace); err == nil {
+		fmt.Printf("[TRACE] GossipSub %s: peer=%s, latency=%dms, size=%d bytes, hops=%d\n",
+			gossipSubTrace.Event, gossipSubTrace.PeerID, gossipSubTrace.LatencyMs,
+			gossipSubTrace.MessageSize, gossipSubTrace.Hops)
+	}
+}
+
+// handleOptimumP2PTrace parses and displays OptimumP2P trace data
+func handleOptimumP2PTrace(data []byte) {
+	// The trace data is protobuf binary from optimum-p2p TraceEvent
+	// For now, display the raw binary data as this contains valuable metrics
+	// Future: Could unmarshal optimum_pb.TraceEvent if protobuf definitions are available
+	fmt.Printf("[TRACE] OptimumP2P trace received (protobuf binary): %d bytes\n", len(data))
+
+	// Try to parse as JSON for structured trace data (fallback/future compatibility)
+	var optimumTrace OptimumP2PTraceData
+	if err := json.Unmarshal(data, &optimumTrace); err == nil {
+		fmt.Printf("[TRACE] OptimumP2P %s: shard=%s (%d/%d), redundancy=%.2f, efficiency=%.2f, latency=%dms\n",
+			optimumTrace.Event, optimumTrace.ShardID, optimumTrace.ReceivedShards,
+			optimumTrace.CodedShards, optimumTrace.Redundancy, optimumTrace.Efficiency, optimumTrace.LatencyMs)
 	}
 }
