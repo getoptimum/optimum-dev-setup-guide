@@ -53,79 +53,14 @@ fi
 print_status "Creating identity directory..."
 mkdir -p "$IDENTITY_DIR"
 
-# Create temporary Go program
-print_status "Creating key generator..."
-cat > ./temp_generate_key.go << 'EOF'
-package main
-
-import (
-    "crypto/rand"
-    "encoding/json"
-    "fmt"
-    "os"
-    "path/filepath"
-
-    "github.com/libp2p/go-libp2p/core/crypto"
-    "github.com/libp2p/go-libp2p/core/peer"
-)
-
-type IdentityInfo struct {
-    Key []byte  `json:"Key"`
-    ID  peer.ID `json:"ID"`
-}
-
-func main() {
-    // Generate Ed25519 keypair
-    pk, _, err := crypto.GenerateEd25519Key(rand.Reader)
-    if err != nil {
-        fmt.Printf("Failed to generate key: %v\n", err)
-        os.Exit(1)
-    }
-
-    // Get peer ID from private key
-    id, err := peer.IDFromPrivateKey(pk)
-    if err != nil {
-        fmt.Printf("Failed to derive peer ID: %v\n", err)
-        os.Exit(1)
-    }
-
-    // Marshal private key to bytes
-    raw, err := crypto.MarshalPrivateKey(pk)
-    if err != nil {
-        fmt.Printf("Failed to marshal key: %v\n", err)
-        os.Exit(1)
-    }
-
-    // Save to identity/p2p.key
-    info := IdentityInfo{Key: raw, ID: id}
-    data, err := json.Marshal(info)
-    if err != nil {
-        fmt.Printf("Failed to marshal identity: %v\n", err)
-        os.Exit(1)
-    }
-
-    keyPath := filepath.Join("identity", "p2p.key")
-    if err := os.WriteFile(keyPath, data, 0600); err != nil {
-        fmt.Printf("Failed to write key file: %v\n", err)
-        os.Exit(1)
-    }
-
-    fmt.Printf("Peer ID: %s\n", id.String())
-}
-EOF
-
-# Initialize Go module and generate key
-print_status "Initializing Go module..."
-go mod init temp-identity-gen 2>/dev/null || true
-
-print_status "Downloading dependencies..."
-go get github.com/libp2p/go-libp2p@latest
+# Use the existing keygen script
+print_status "Using existing keygen script..."
+cd keygen
 
 print_status "Generating P2P keypair..."
-PEER_OUTPUT=$(go run temp_generate_key.go)
+PEER_OUTPUT=$(go run generate_p2p_key.go)
 
-# Clean up temporary files
-rm -f temp_generate_key.go go.mod go.sum
+cd ..
 
 # Extract Peer ID and export it
 PEER_ID=$(echo "$PEER_OUTPUT" | grep "Peer ID:" | cut -d' ' -f3)
