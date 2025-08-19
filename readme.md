@@ -125,6 +125,42 @@ npm install -g wscat
 
 This is required before launching the network.
 
+#### Quick Setup (Recommended)
+
+For a streamlined identity generation process:
+
+```sh
+./script/generate-identity.sh
+```
+
+This script:
+* Creates `./identity/` directory
+* Generates P2P keypair using Go
+* Saves to `identity/p2p.key` 
+* Exports `BOOTSTRAP_PEER_ID` environment variable
+* Handles existing identity gracefully
+* Cleans up temporary files automatically
+
+**Output:**
+```
+[INFO] Generating P2P Bootstrap Identity...
+[INFO] Creating identity directory...
+[INFO] Creating key generator...
+[INFO] Initializing Go module...
+[INFO] Downloading dependencies...
+[INFO] Generating P2P keypair...
+[SUCCESS] Generated P2P identity successfully!
+[SUCCESS] Identity saved to: ./identity/p2p.key
+[SUCCESS] Peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+[INFO] To use in docker-compose:
+export BOOTSTRAP_PEER_ID=12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+[SUCCESS] Done! Your OptimumP2P peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+```
+
+#### Manual Setup (Alternative)
+
+If you prefer manual key generation:
+
 ```sh
 sh ./script/generate_p2p_key.sh
 ```
@@ -135,7 +171,9 @@ It creates a file at `identity/p2p.key` and prints:
 Peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
 ```
 
-Set it in your .env file:
+#### Configure Environment
+
+Set the generated Peer ID in your .env file:
 
 ```sh
 cp .env.example .env
@@ -455,6 +493,24 @@ If you encounter keepalive-related errors:
 3. **Server compatibility**: Some servers have strict ping limits; use conservative settings
 
 If you encounter message stalls at high volume, ensure you are using the latest client with the gRPC window size fix (see above).
+
+---
+
+## Quick Installation
+
+For the fastest setup experience, you can generate your P2P identity with a single command:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/getoptimum/optimum-dev-setup-guide/main/script/generate-identity.sh | bash
+```
+
+This will:
+* Download and execute the identity generation script
+* Create your P2P bootstrap identity
+* Export the `BOOTSTRAP_PEER_ID` environment variable
+* Set up everything needed to start your OptimumP2P network
+
+> **Note:** This requires Go to be installed on your system. The script will automatically download the required dependencies.
 
 ## Inspecting P2P Nodes
 
