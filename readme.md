@@ -111,26 +111,24 @@ For a streamlined identity generation process:
 
 This script:
 * Creates `./identity/` directory
-* Generates P2P keypair using Go
-* Saves to `identity/p2p.key` 
+* Generates P2P keypair using the existing keygen utility
+* Saves to `identity/p2p.key` with proper checksum format
 * Exports `BOOTSTRAP_PEER_ID` environment variable
 * Handles existing identity gracefully
-* Cleans up temporary files automatically
+* Uses the correct file format expected by OptimumP2P nodes
 
 **Output:**
 ```
 [INFO] Generating P2P Bootstrap Identity...
 [INFO] Creating identity directory...
-[INFO] Creating key generator...
-[INFO] Initializing Go module...
-[INFO] Downloading dependencies...
+[INFO] Using existing keygen script...
 [INFO] Generating P2P keypair...
 [SUCCESS] Generated P2P identity successfully!
 [SUCCESS] Identity saved to: ./identity/p2p.key
-[SUCCESS] Peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+[SUCCESS] Peer ID: 12D3KooWLsSmLLoE2T7JJ3ZyPqoXEusnBhsBA1ynJETsziCKGsBw
 [INFO] To use in docker-compose:
-export BOOTSTRAP_PEER_ID=12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
-[SUCCESS] Done! Your OptimumP2P peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+export BOOTSTRAP_PEER_ID=12D3KooWLsSmLLoE2T7JJ3ZyPqoXEusnBhsBA1ynJETsziCKGsBw
+[SUCCESS] Done! Your OptimumP2P peer ID: 12D3KooWLsSmLLoE2T7JJ3ZyPqoXEusnBhsBA1ynJETsziCKGsBw
 ```
 
 #### Manual Setup (Alternative)
@@ -144,7 +142,7 @@ sh ./script/generate_p2p_key.sh
 It creates a file at `identity/p2p.key` and prints:
 
 ```sh
-Peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+Peer ID: 12D3KooWLsSmLLoE2T7JJ3ZyPqoXEusnBhsBA1ynJETsziCKGsBw
 ```
 
 #### Configure Environment
@@ -158,7 +156,7 @@ cp .env.example .env
 Edit .env:
 
 ```sh
-BOOTSTRAP_PEER_ID=12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+BOOTSTRAP_PEER_ID=12D3KooWLsSmLLoE2T7JJ3ZyPqoXEusnBhsBA1ynJETsziCKGsBw
 ```
 
 ### 2. Launch the Sample Network
@@ -197,6 +195,29 @@ Default values are provided, but it's important to understand what each variable
 * `OPTIMUM_THRESHOLD`: Minimum % of shard redundancy before forwarding message (e.g., 0.75 = 75%)
 
 If you want to learn about mesh, see how [Eth2 is using gossipsub](https://github.com/LeastAuthority/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub).
+
+#### Troubleshooting
+
+If you encounter issues during setup, here are common problems and solutions:
+
+**"node not found" errors:**
+- Ensure all P2P nodes have access to the identity file (volume mounts are configured correctly)
+- Verify the `.env` file contains the correct `BOOTSTRAP_PEER_ID`
+- Check that the identity file was generated using the correct script
+
+**"checksum mismatch" errors:**
+- Delete the `identity/` directory and regenerate using `./script/generate-identity.sh`
+- The identity file must have the proper checksum format expected by OptimumP2P nodes
+
+**Nodes not connecting to bootstrap:**
+- Verify all nodes have unique `CLUSTER_ID` values
+- Check that the bootstrap peer ID in `BOOTSTRAP_PEERS` matches the generated identity
+- Ensure the network topology allows proper communication between nodes
+
+**Proxy connection issues:**
+- Verify all P2P nodes are healthy and running
+- Check that the proxy can reach all P2P node sidecar ports (33212)
+- Ensure the `P2P_NODES` environment variable contains correct node addresses
 
 ## Use Cases
 
