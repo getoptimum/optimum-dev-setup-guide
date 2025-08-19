@@ -138,4 +138,4 @@ echo
 print_status "To use in docker-compose:"
 echo "export BOOTSTRAP_PEER_ID=$PEER_ID"
 echo
-print_success "Done! You can now start your OptimumP2P network."
+print_success "Done! Your OptimumP2P peer ID: $PEER_ID"

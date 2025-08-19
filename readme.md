@@ -154,7 +154,7 @@ This script:
 [SUCCESS] Peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
 [INFO] To use in docker-compose:
 export BOOTSTRAP_PEER_ID=12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
-[SUCCESS] Done! You can now start your OptimumP2P network.
+[SUCCESS] Done! Your OptimumP2P peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
 ```
 
 #### Manual Setup (Alternative)
