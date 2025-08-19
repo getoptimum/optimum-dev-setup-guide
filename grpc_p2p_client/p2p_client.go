@@ -30,6 +30,40 @@ type P2PMessage struct {
 	SourceNodeID string // ID of the node that sent the message (we don't need it in future, it is just for debug purposes)
 }
 
+// TraceData represents structured trace information for analysis
+type TraceData struct {
+	Event          string    `json:"event"`
+	Timestamp      time.Time `json:"timestamp"`
+	MessageID      string    `json:"message_id,omitempty"`
+	Topic          string    `json:"topic,omitempty"`
+	NodeID         string    `json:"node_id,omitempty"`
+	LatencyMs      int       `json:"latency_ms,omitempty"`
+	BandwidthBytes int       `json:"bandwidth_bytes,omitempty"`
+	ShardID        string    `json:"shard_id,omitempty"`
+	ShardIndex     int       `json:"shard_index,omitempty"`
+	TotalShards    int       `json:"total_shards,omitempty"`
+	Redundancy     float64   `json:"redundancy,omitempty"`
+	Protocol       string    `json:"protocol,omitempty"`
+}
+
+// GossipSubTraceData represents GossipSub-specific trace information
+type GossipSubTraceData struct {
+	TraceData
+	PeerID         string `json:"peer_id,omitempty"`
+	MessageSize    int    `json:"message_size,omitempty"`
+	DeliveryStatus string `json:"delivery_status,omitempty"`
+	Hops           int    `json:"hops,omitempty"`
+}
+
+// OptimumP2PTraceData represents OptimumP2P-specific trace information
+type OptimumP2PTraceData struct {
+	TraceData
+	CodedShards        int     `json:"coded_shards,omitempty"`
+	ReceivedShards     int     `json:"received_shards,omitempty"`
+	ReconstructionTime int     `json:"reconstruction_time_ms,omitempty"`
+	Efficiency         float64 `json:"efficiency,omitempty"`
+}
+
 // Command possible operation that sidecar may perform with p2p node
 type Command int32
 
@@ -187,11 +221,43 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 		n := atomic.AddInt32(counter, 1)
 		fmt.Printf("[%d] Received message: %q\n", n, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
-		fmt.Printf("[TRACE] GossipSub trace received: %s\n", string(resp.GetData()))
+		handleGossipSubTrace(resp.GetData())
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
-		fmt.Printf("[TRACE] OptimumP2P trace received: %s\n", string(resp.GetData()))
+		handleOptimumP2PTrace(resp.GetData())
 	case protobuf.ResponseType_Unknown:
 	default:
 		log.Println("Unknown response command:", resp.GetCommand())
+	}
+}
+
+// handleGossipSubTrace parses and displays GossipSub trace data
+func handleGossipSubTrace(data []byte) {
+	// The trace data is protobuf binary from libp2p-pubsub TraceEvent
+	// For now, display the raw binary data as this contains valuable metrics
+	// Future: Could unmarshal pb.TraceEvent if protobuf definitions are available
+	fmt.Printf("[TRACE] GossipSub trace received (protobuf binary): %d bytes\n", len(data))
+
+	// Try to parse as JSON for structured trace data (fallback/future compatibility)
+	var gossipSubTrace GossipSubTraceData
+	if err := json.Unmarshal(data, &gossipSubTrace); err == nil {
+		fmt.Printf("[TRACE] GossipSub %s: peer=%s, latency=%dms, size=%d bytes, hops=%d\n",
+			gossipSubTrace.Event, gossipSubTrace.PeerID, gossipSubTrace.LatencyMs,
+			gossipSubTrace.MessageSize, gossipSubTrace.Hops)
+	}
+}
+
+// handleOptimumP2PTrace parses and displays OptimumP2P trace data
+func handleOptimumP2PTrace(data []byte) {
+	// The trace data is protobuf binary from optimum-p2p TraceEvent
+	// For now, display the raw binary data as this contains valuable metrics
+	// Future: Could unmarshal optimum_pb.TraceEvent if protobuf definitions are available
+	fmt.Printf("[TRACE] OptimumP2P trace received (protobuf binary): %d bytes\n", len(data))
+
+	// Try to parse as JSON for structured trace data (fallback/future compatibility)
+	var optimumTrace OptimumP2PTraceData
+	if err := json.Unmarshal(data, &optimumTrace); err == nil {
+		fmt.Printf("[TRACE] OptimumP2P %s: shard=%s (%d/%d), redundancy=%.2f, efficiency=%.2f, latency=%dms\n",
+			optimumTrace.Event, optimumTrace.ShardID, optimumTrace.ReceivedShards,
+			optimumTrace.CodedShards, optimumTrace.Redundancy, optimumTrace.Efficiency, optimumTrace.LatencyMs)
 	}
 }

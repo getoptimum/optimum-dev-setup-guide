@@ -75,8 +75,7 @@ optimum-dev-setup-guide/
 │   ├── proxy_client.sh   # Proxy client setup script
 │   └── generate_p2p_key.sh # Key generation script
 ├── docker-compose.yml     # Docker compose configuration
-├── test_suite.sh         # Test suite script
-└── test_keepalive_fix.sh # gRPC keepalive testing script
+└── test_suite.sh         # Test suite script
 ```
 
 ## Prerequisites
@@ -102,6 +101,42 @@ npm install -g wscat
 
 This is required before launching the network.
 
+#### Quick Setup (Recommended)
+
+For a streamlined identity generation process:
+
+```sh
+./script/generate-identity.sh
+```
+
+This script:
+* Creates `./identity/` directory
+* Generates P2P keypair using Go
+* Saves to `identity/p2p.key` 
+* Exports `BOOTSTRAP_PEER_ID` environment variable
+* Handles existing identity gracefully
+* Cleans up temporary files automatically
+
+**Output:**
+```
+[INFO] Generating P2P Bootstrap Identity...
+[INFO] Creating identity directory...
+[INFO] Creating key generator...
+[INFO] Initializing Go module...
+[INFO] Downloading dependencies...
+[INFO] Generating P2P keypair...
+[SUCCESS] Generated P2P identity successfully!
+[SUCCESS] Identity saved to: ./identity/p2p.key
+[SUCCESS] Peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+[INFO] To use in docker-compose:
+export BOOTSTRAP_PEER_ID=12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+[SUCCESS] Done! Your OptimumP2P peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
+```
+
+#### Manual Setup (Alternative)
+
+If you prefer manual key generation:
+
 ```sh
 sh ./script/generate_p2p_key.sh
 ```
@@ -112,7 +147,9 @@ It creates a file at `identity/p2p.key` and prints:
 Peer ID: 12D3KooWJ5wcJWsfPmy6ssqonno14baQMozmteSkRGKxAzB3k2t8
 ```
 
-Set it in your .env file:
+#### Configure Environment
+
+Set the generated Peer ID in your .env file:
 
 ```sh
 cp .env.example .env
@@ -399,6 +436,23 @@ sh ./script/p2p_client.sh 127.0.0.1:33221 publish my-topic "random" -count=10 -s
 * `-count`: Number of messages to publish (default: 1)
 * `-sleep`: Delay between publishes (e.g., 100ms, 1s)
 
+---
+
+## Quick Installation
+
+For the fastest setup experience, you can generate your P2P identity with a single command:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/getoptimum/optimum-dev-setup-guide/main/script/generate-identity.sh | bash
+```
+
+This will:
+* Download and execute the identity generation script
+* Create your P2P bootstrap identity
+* Export the `BOOTSTRAP_PEER_ID` environment variable
+* Set up everything needed to start your OptimumP2P network
+
+> **Note:** This requires Go to be installed on your system. The script will automatically download the required dependencies.
 ## Inspecting P2P Nodes
 
 ### Get Node Health
@@ -474,7 +528,7 @@ Subscribed to topic "your-topic", waiting for messages…
 [1] Received message: "Hello World"
 ```
 
-**Note:** The trace data appears as binary/encoded format for performance optimization. This contains delivery latency, bandwidth usage, and shard redundancy metrics in an efficient binary format.
+**Note:** The trace data appears as protobuf binary format (marshaled TraceEvent structures) for performance optimization. This contains delivery latency, bandwidth usage, and shard redundancy metrics in an efficient binary format, aligned with the optimum-proxy implementation.
 
 ### Understanding Trace Data
 
@@ -497,7 +551,7 @@ This trace collection is perfect for:
 
 ### Reference Implementation
 
-The trace logging is implemented in `grpc_p2p_client/p2p_client.go` lines 210-213:
+The trace logging is implemented in `grpc_p2p_client/p2p_client.go`:
 
 ```go
 case protobuf.ResponseType_MessageTraceGossipSub:
@@ -506,7 +560,33 @@ case protobuf.ResponseType_MessageTraceOptimumP2P:
     fmt.Printf("[TRACE] OptimumP2P trace received: %s\n", string(resp.GetData()))
 ```
 
-This provides a simple reference for how to collect and process trace data in your own applications.
+### Advanced Trace Data Parsing
+
+For developers who want to parse the trace data attributes, you can define structs to handle the binary data:
+
+```go
+// Example struct for parsing trace data (when available in JSON format)
+type TraceData struct {
+    Event       string    `json:"event"`
+    Timestamp   time.Time `json:"timestamp"`
+    LatencyMs   int       `json:"latency_ms,omitempty"`
+    BandwidthBytes int    `json:"bandwidth_bytes,omitempty"`
+    ShardID     string    `json:"shard_id,omitempty"`
+    Redundancy  float64   `json:"redundancy,omitempty"`
+}
+
+// Usage example (when trace data is in JSON format)
+case protobuf.ResponseType_MessageTraceOptimumP2P:
+    var traceData TraceData
+    if err := json.Unmarshal(resp.GetData(), &traceData); err != nil {
+        log.Printf("Error parsing trace data: %v", err)
+    } else {
+        fmt.Printf("[TRACE] OptimumP2P %s: latency=%dms, redundancy=%.2f\n", 
+            traceData.Event, traceData.LatencyMs, traceData.Redundancy)
+    }
+```
+
+This provides both simple logging and structured parsing options for trace data analysis.
 
 ## Developer Tools
 
