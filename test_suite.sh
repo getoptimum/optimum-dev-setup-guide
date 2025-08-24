@@ -61,7 +61,7 @@ api_subscribe() {
   local client_id="$1"
   local topic="$2"
   local threshold="$3"
-  curl -s -X POST "$PROXY_URL/api/subscribe" \
+  curl -s -X POST "$PROXY_URL/api/v1/subscribe" \
     -H "Content-Type: application/json" \
     -d "{\"client_id\": \"$client_id\", \"topic\": \"$topic\", \"threshold\": $threshold}"
 }
@@ -70,7 +70,7 @@ api_publish() {
   local client_id="$1"
   local topic="$2"
   local message="$3"
-  curl -s -X POST "$PROXY_URL/api/publish" \
+  curl -s -X POST "$PROXY_URL/api/v1/publish" \
     -H "Content-Type: application/json" \
     -d "{\"client_id\": \"$client_id\", \"topic\": \"$topic\", \"message\": \"$message\"}"
 }
@@ -134,7 +134,7 @@ echo
 
 # Test 8: Invalid JSON
 echo -e "${YELLOW}Test: Subscribe (invalid JSON)${NC}"
-resp=$(curl -s -X POST "$PROXY_URL/api/subscribe" -H "Content-Type: application/json" -d 'invalid json')
+resp=$(curl -s -X POST "$PROXY_URL/api/v1/subscribe" -H "Content-Type: application/json" -d 'invalid json')
 test_result "$resp" 'invalid JSON' "Subscribe (invalid JSON)"
 echo
 
@@ -171,7 +171,7 @@ if command -v wscat >/dev/null 2>&1; then
   fi
   
   if [[ -n "$TIMEOUT_CMD" ]]; then
-    output=$($TIMEOUT_CMD 5 wscat -c "ws://$PROXY_URL/api/ws?client_id=$CLIENT_ID" 2>&1)
+    output=$($TIMEOUT_CMD 5 wscat -c "ws://$PROXY_URL/api/v1/ws?client_id=$CLIENT_ID" 2>&1)
     if echo "$output" | grep -q "Connected" || echo "$output" | grep -q ">" || echo "$output" | grep -q "connected"; then
       echo -e "${GREEN}[PASS]${NC} WebSocket connection"
       PASS=$((PASS+1))
@@ -203,14 +203,14 @@ test_result "$resp" 'message is missing' "Publish validation (empty message)"
 echo
 
 echo -e "${YELLOW}Test: Publish validation (missing topic)${NC}"
-resp=$(curl -s -X POST "$PROXY_URL/api/publish" \
+resp=$(curl -s -X POST "$PROXY_URL/api/v1/publish" \
   -H "Content-Type: application/json" \
   -d "{\"client_id\": \"$CLIENT_ID\", \"message\": \"Hello\"}")
 test_result "$resp" 'topic is missing' "Publish validation (missing topic)"
 echo
 
 echo -e "${YELLOW}Test: Publish validation (missing message)${NC}"
-resp=$(curl -s -X POST "$PROXY_URL/api/publish" \
+resp=$(curl -s -X POST "$PROXY_URL/api/v1/publish" \
   -H "Content-Type: application/json" \
   -d "{\"client_id\": \"$CLIENT_ID\", \"topic\": \"$TOPIC\"}")
 test_result "$resp" 'message is missing' "Publish validation (missing message)"

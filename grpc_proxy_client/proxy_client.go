@@ -21,7 +21,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 )
 
 const (
@@ -40,8 +39,8 @@ var (
 	messageCount  = flag.Int("count", defaultMsgCount, "number of messages to publish")
 	messageDelay  = flag.Duration("delay", defaultDelay, "delay between message publishing")
 
-	keepaliveTime    = flag.Duration("keepalive-interval", 2*time.Minute, "gRPC keepalive interval")
-	keepaliveTimeout = flag.Duration("keepalive-timeout", 20*time.Second, "gRPC keepalive timeout")
+	proxyAddr = flag.String("proxy", "localhost:50051", "proxy gRPC server address")
+	restAddr  = flag.String("rest", "http://localhost:8081", "proxy REST API base URL")
 
 	words = []string{"hello", "ping", "update", "broadcast", "status", "message", "event", "data", "note"}
 )
@@ -58,7 +57,7 @@ func main() {
 	}
 
 	// Connect to gRPC stream with flow control settings
-	conn, err := grpc.NewClient(proxyGRPC,
+	conn, err := grpc.NewClient(*proxyAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithInitialWindowSize(1024*1024*1024),     // 1GB per-stream receive window
 		grpc.WithInitialConnWindowSize(1024*1024*1024), // 1GB connection-level receive window
@@ -66,11 +65,6 @@ func main() {
 			grpc.MaxCallRecvMsgSize(math.MaxInt),
 			grpc.MaxCallSendMsgSize(math.MaxInt),
 		),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                *keepaliveTime,
-			Timeout:             *keepaliveTimeout,
-			PermitWithoutStream: false,
-		}),
 	)
 	if err != nil {
 		log.Fatalf("gRPC connection failed: %v", err)
@@ -137,7 +131,7 @@ func subscribe(clientID, topic string, threshold float64) error {
 		"threshold": threshold,
 	}
 	data, _ := json.Marshal(body)
-	resp, err := http.Post(proxyREST+"/api/subscribe", "application/json", bytes.NewReader(data))
+	resp, err := http.Post(*restAddr+"/api/v1/subscribe", "application/json", bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -154,7 +148,7 @@ func publishMessage(clientID, topic, msg string) error {
 		"message":   msg,
 	}
 	data, _ := json.Marshal(body)
-	resp, err := http.Post(proxyREST+"/api/publish", "application/json", bytes.NewReader(data))
+	resp, err := http.Post(*restAddr+"/api/v1/publish", "application/json", bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
