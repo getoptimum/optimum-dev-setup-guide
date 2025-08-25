@@ -242,7 +242,7 @@ Proxies provide the user-facing interface to OptimumP2P.
 ### Subscribe to Topic
 
 ```sh
-curl -X POST http://localhost:8081/api/subscribe \
+curl -X POST http://localhost:8081/api/v1/subscribe \
   -H "Content-Type: application/json" \
   -d '{
     "client_id": "your-client-id", 
@@ -259,7 +259,7 @@ Here, `client_id` is your WebSocket connection identifier. Usually, we use Auth0
 ### WebSocket Connection
 
 ```sh
-wscat -c "ws://localhost:8081/api/ws?client_id=your-client-id"
+wscat -c "ws://localhost:8081/api/v1/ws?client_id=your-client-id"
 ```
 
 This is how clients receive messages published to their subscribed topics.
@@ -269,7 +269,7 @@ This is how clients receive messages published to their subscribed topics.
 ### Publish Message
 
 ```sh
-curl -X POST http://localhost:8081/api/publish \
+curl -X POST http://localhost:8081/api/v1/publish \
   -H "Content-Type: application/json" \
   -d '{
     "client_id": "your-client-id",
@@ -322,7 +322,7 @@ A new Go-based gRPC client implementation is available in `grpc_proxy_client/pro
 * **Bidirectional gRPC Streaming**: Establishes persistent connection with the proxy
 * **REST API Integration**: Uses REST for subscription and publishing
 * **Automatic Client ID Generation**: Generates unique client identifiers
-* **Configurable Keepalive**: Optimized gRPC keepalive settings
+* **Optimized gRPC Connection**: Efficient bidirectional streaming
 * **Message Publishing Loop**: Automated message publishing with configurable delays
 * **Signal Handling**: Graceful shutdown on interrupt
 
@@ -339,8 +339,8 @@ go build -o proxy_client proxy_client.go
 # Subscribe and publish messages
 ./proxy_client -topic=test -threshold=0.7 -count=10 -delay=2s
 
-# Custom keepalive settings
-./proxy_client -topic=test -keepalive-interval=5m -keepalive-timeout=30s
+# Custom connection settings
+./proxy_client -topic=test -threshold=0.7 -count=10
 ```
 
 ### Command Line Flags
@@ -350,8 +350,8 @@ go build -o proxy_client proxy_client.go
 * `-subscribeOnly`: Only subscribe and receive messages
 * `-count`: Number of messages to publish (default: 5)
 * `-delay`: Delay between message publishing (default: 2s)
-* `-keepalive-interval`: gRPC keepalive interval (default: 2m)
-* `-keepalive-timeout`: gRPC keepalive timeout (default: 20s)
+* `-proxy`: Proxy server address (default: "localhost:33211")
+* `-rest`: REST API base URL (default: "http://localhost:8081")
 
 ### Protocol Flow
 
