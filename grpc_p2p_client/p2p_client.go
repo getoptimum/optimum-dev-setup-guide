@@ -93,6 +93,7 @@ func main() {
 	}
 
 	// connect with simple gRPC settings
+	println(fmt.Sprintf("Connecting to node at: %s…", *addr))
 	conn, err := grpc.NewClient(*addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(
@@ -126,6 +127,7 @@ func main() {
 
 	switch *mode {
 	case "subscribe":
+		println(fmt.Sprintf("Trying to subscribe to topic %s…", *topic))
 		subReq := &protobuf.Request{
 			Command: int32(CommandSubscribeToTopic),
 			Topic:   *topic,
