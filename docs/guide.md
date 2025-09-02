@@ -133,8 +133,8 @@ The OptimumP2P development setup provides a complete messaging infrastructure wi
 
 ### Core Components
 
-- **4 P2P Nodes**: Form the RLNC-enhanced mesh network
-- **2 Proxies**: Provide client-facing APIs (REST, gRPC, WebSocket)
+- **P2P Node**: Form the RLNC-enhanced mesh network
+- **Proxy**: Provide client-facing APIs (REST, gRPC, WebSocket)
 - **Static Network Overlay**: Ensures deterministic internal addressing
 
 ### Communication Flow
@@ -739,16 +739,14 @@ This provides both simple logging and structured parsing options for trace data 
 
 ## Advanced Configuration
 
-### Authentication Setup
+### Authentication Setup (Optional)
 
-Enable Auth0 JWT authentication by setting environment variables:
+For development, authentication is disabled by default. Enable Auth0 JWT authentication by setting environment variables:
 
 ```yaml
 # docker-compose.yml
 environment:
-  ENABLE_AUTH: "true"
-  AUTH0_DOMAIN: "your-domain.auth0.com"
-  AUTH0_AUDIENCE: "your-api-audience"
+  ENABLE_AUTH: "false"
 ```
 
 ### Rate Limiting
