@@ -52,6 +52,13 @@ make build
 
 # Generate P2P identity (if needed)
 make generate-identity
+
+# Subscribe to a topic
+make subscribe 127.0.0.1:33221 testtopic
+
+# Publish messages
+make publish 127.0.0.1:33221 testtopic random
+make publish 127.0.0.1:33221 testtopic random 10 1s
 ```
 
 ### Direct Binary Usage (Recommended)
@@ -155,6 +162,8 @@ build                          Build all client binaries
 clean                          Clean build artifacts
 generate-identity              Generate P2P identity (if missing)
 help                           Show help
+publish                        publish message to p2p topic: make publish <addr> <topic> <message|random> [count] [sleep]
+subscribe                      subscribe to p2p topic: make subscribe <addr> <topic>
 
 Direct binary usage (recommended):
   # Subscribe to a topic
@@ -166,6 +175,32 @@ Direct binary usage (recommended):
 
   # Publish multiple messages with options
   ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" --addr="127.0.0.1:33221" -count=10 -sleep=1s
+```
+
+### Working Makefile Commands
+
+```sh
+# Subscribe to a topic
+make subscribe 127.0.0.1:33221 testtopic
+
+# Publish random messages
+make publish 127.0.0.1:33221 testtopic random
+
+# Publish multiple random messages with delay
+make publish 127.0.0.1:33221 testtopic random 10 1s
+```
+
+**Example Output:**
+```
+# Subscribe receives messages in real-time:
+Connecting to node at: 127.0.0.1:33221…
+Subscribed to topic "testtopic", waiting for messages…
+[1] Received message: "P2P message 1 - 3cc8f3fb"
+[2] Received message: "P2P message 2 - b1d6de6c"
+
+# Publish sends messages:
+Publishing random messages to topic=testtopic addr=127.0.0.1:33221 count=10 sleep=1s
+Published "P2P message 1 - 3cc8f3fb" to "testtopic"
 ```
 
 ### Direct Binary Commands

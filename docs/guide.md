@@ -86,6 +86,13 @@ make build
 # Generate P2P identity (if missing)
 make generate-identity
 
+# Subscribe to a topic
+make subscribe 127.0.0.1:33221 testtopic
+
+# Publish random messages
+make publish 127.0.0.1:33221 testtopic random
+make publish 127.0.0.1:33221 testtopic random 10 1s
+
 # Clean build artifacts
 make clean
 ```
