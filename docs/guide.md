@@ -70,6 +70,64 @@ docker-compose up --build
 ./test_suite.sh
 ```
 
+## Build and Development Commands
+
+### Makefile Commands
+
+The project includes a Makefile with convenient shortcuts for common development tasks:
+
+```sh
+# Show all available commands and usage examples
+make help
+
+# Build all client binaries
+make build
+
+# Generate P2P identity (if missing)
+make generate-identity
+
+# Subscribe to a topic
+make subscribe 127.0.0.1:33221 testtopic
+
+# Publish random messages
+make publish 127.0.0.1:33221 testtopic random
+make publish 127.0.0.1:33221 testtopic random 10 1s
+
+# Clean build artifacts
+make clean
+```
+
+### Direct Binary Usage
+
+After building with `make build`, you can use the binaries directly:
+
+```sh
+# P2P Client Help
+./grpc_p2p_client/p2p-client --help
+
+# Subscribe to a topic
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=testtopic --addr=127.0.0.1:33221
+
+# Publish messages
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
+
+# Publish multiple messages with delay
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic --addr=127.0.0.1:33222 -count=5 -sleep=1s
+```
+
+**Example Output:**
+```
+# Subscribe output:
+Connecting to node at: 127.0.0.1:33221…
+Trying to subscribe to topic testtopic…
+Subscribed to topic "testtopic", waiting for messages…
+[1] Received message: "HelloWorld"
+
+# Publish output:
+Connecting to node at: 127.0.0.1:33222…
+Published "HelloWorld" to "testtopic"
+```
+
 ## Configuration
 
 Default values are provided, but it's important to understand what each variable does.
@@ -547,7 +605,7 @@ This is useful for:
 ##### Subscribe to a Topic
 
 ```sh
-sh ./script/p2p_client.sh localhost:33221 subscribe mytopic
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=localhost:33221
 ```
 
 > **Note:** Here, `localhost:33221` is the mapped port for `p2pnode-1` (33221:33212) in docker-compose.
@@ -564,7 +622,7 @@ Received message: "random2"
 ##### Publish to a Topic
 
 ```sh
-sh ./script/p2p_client.sh localhost:33222 publish mytopic random
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=localhost:33222
 ```
 
 > **Note:** Here, `localhost:33222` is the mapped port for `p2pnode-2` (33222:33212) in docker-compose.
@@ -587,10 +645,10 @@ The P2P client supports various publishing options for testing:
 
 ```sh
 # Publish a single message
-sh ./script/p2p_client.sh 127.0.0.1:33221 publish my-topic "Hello World"
+./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic -msg="Hello World" --addr=127.0.0.1:33221
 
 # Publish multiple messages with delay
-sh ./script/p2p_client.sh 127.0.0.1:33221 publish my-topic "random" -count=10 -sleep=1s
+./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic --addr=127.0.0.1:33221 -count=10 -sleep=1s
 ```
 
 #### Available Flags
@@ -662,7 +720,7 @@ These traces contain valuable metrics like delivery latency, bandwidth usage, an
 
 ```bash
 # Subscribe to a topic and collect trace data
-sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe your-topic
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=your-topic --addr=127.0.0.1:33221
 ```
 
 You'll see trace logs in real-time like:
@@ -830,7 +888,7 @@ histogram_quantile(0.95, rate(published_message_size_bytes_bucket[5m]))
 The P2P client includes built-in trace collection for performance analysis:
 
 ```sh
-./script/p2p_client.sh 127.0.0.1:33221 subscribe your-topic
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=your-topic --addr=127.0.0.1:33221
 ```
 
 **Output includes:**

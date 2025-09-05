@@ -40,12 +40,52 @@ This setup is not production-ready but is designed to:
 
 ## Example: Basic Usage
 
+### Quick Start with Makefile
+
+```sh
+# Show help and available commands
+make help
+make
+
+# Build all client binaries
+make build
+
+# Generate P2P identity (if needed)
+make generate-identity
+
+# Subscribe to a topic
+make subscribe 127.0.0.1:33221 testtopic
+
+# Publish messages
+make publish 127.0.0.1:33221 testtopic random
+make publish 127.0.0.1:33221 testtopic random 10 1s
+```
+
+### Direct Binary Usage (Recommended)
+
 ```sh
 # Subscribe to a topic (in one terminal)
-sh ./script/p2p_client.sh 127.0.0.1:33221 subscribe my-topic
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=testtopic --addr=127.0.0.1:33221
 
 # Publish messages (in another terminal)
-sh ./script/p2p_client.sh 127.0.0.1:33221 publish my-topic "Hello World"
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
+
+# Publish multiple messages with delay
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic --addr=127.0.0.1:33222 -count=5 -sleep=1s
+```
+
+**Example Output:**
+```
+# Subscribe output:
+Connecting to node at: 127.0.0.1:33221…
+Trying to subscribe to topic testtopic…
+Subscribed to topic "testtopic", waiting for messages…
+[1] Received message: "HelloWorld"
+[2] Received message: "P2P message 1 - 56a4322c"
+
+# Publish output:
+Connecting to node at: 127.0.0.1:33222…
+Published "HelloWorld" to "testtopic"
 ```
 
 ---
@@ -69,8 +109,8 @@ optimum-dev-setup-guide/
 │   └── generate_p2p_key.go
 ├── script/                # Utility scripts
 │   ├── generate-identity.sh # Bootstrap identity generation
-│   ├── p2p_client.sh       # P2P client wrapper
 │   └── proxy_client.sh     # Proxy client wrapper
+├── Makefile               # Build shortcuts and usage examples
 ├── docker-compose.yml     # Service orchestration
 ├── test_suite.sh          # API validation tests
 └── README.md              # This file
@@ -105,6 +145,99 @@ docker-compose up --build -d
 ./test_suite.sh
 ```
 
+## Available Commands
+
+### Makefile Commands
+
+The Makefile provides convenient shortcuts for common development tasks:
+
+```sh
+# Show all available commands and usage examples
+make help
+```
+
+**Output:**
+```
+build                          Build all client binaries
+clean                          Clean build artifacts
+generate-identity              Generate P2P identity (if missing)
+help                           Show help
+publish                        publish message to p2p topic: make publish <addr> <topic> <message|random> [count] [sleep]
+subscribe                      subscribe to p2p topic: make subscribe <addr> <topic>
+
+Direct binary usage (recommended):
+  # Subscribe to a topic
+  ./grpc_p2p_client/p2p-client -mode=subscribe -topic="testtopic" --addr="127.0.0.1:33221"
+
+  # Publish messages
+  ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" --addr="127.0.0.1:33221"
+  ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" -msg="Hello World" --addr="127.0.0.1:33221"
+
+  # Publish multiple messages with options
+  ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" --addr="127.0.0.1:33221" -count=10 -sleep=1s
+```
+
+### Working Makefile Commands
+
+```sh
+# Subscribe to a topic
+make subscribe 127.0.0.1:33221 testtopic
+
+# Publish random messages
+make publish 127.0.0.1:33221 testtopic random
+
+# Publish multiple random messages with delay
+make publish 127.0.0.1:33221 testtopic random 10 1s
+```
+
+**Example Output:**
+```
+# Subscribe receives messages in real-time:
+Connecting to node at: 127.0.0.1:33221…
+Subscribed to topic "testtopic", waiting for messages…
+[1] Received message: "P2P message 1 - 3cc8f3fb"
+[2] Received message: "P2P message 2 - b1d6de6c"
+
+# Publish sends messages:
+Publishing random messages to topic=testtopic addr=127.0.0.1:33221 count=10 sleep=1s
+Published "P2P message 1 - 3cc8f3fb" to "testtopic"
+```
+
+### Direct Binary Commands
+
+#### P2P Client Commands
+
+```sh
+# Build the P2P client
+make build
+
+# Subscribe to a topic
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=testtopic --addr=127.0.0.1:33221
+
+# Publish a single message
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
+
+# Publish multiple random messages with delay
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic --addr=127.0.0.1:33222 -count=5 -sleep=1s
+```
+
+#### Command Options
+
+The P2P client supports these flags:
+- `-mode`: Operation mode (`subscribe` or `publish`)
+- `-topic`: Topic name to subscribe/publish to
+- `-addr`: P2P node gRPC address (default: `localhost:33212`)
+- `-msg`: Message content (for publish mode)
+- `-count`: Number of messages to publish (default: 1)
+- `-sleep`: Delay between messages (e.g., `1s`, `500ms`)
+
+#### Port Mapping
+
+The development setup exposes these P2P node ports:
+- `127.0.0.1:33221` → p2pnode-1 (sidecar port 33212)
+- `127.0.0.1:33222` → p2pnode-2 (sidecar port 33212)
+- `127.0.0.1:33223` → p2pnode-3 (sidecar port 33212)
+- `127.0.0.1:33224` → p2pnode-4 (sidecar port 33212)
 
 
 ## Developer Tools
