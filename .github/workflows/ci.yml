@@ -127,12 +127,10 @@ jobs:
             echo "P2P node health check failed - continuing with test suite"
           fi
       
-      # TODO: Fix test suite - currently reports 7 failures but marks as successful
-      # Issue: https://github.com/getoptimum/optimum-dev-setup-guide/issues/33
-      # - name: Run Test Suite
-      #   run: |
-      #     chmod +x ./test_suite.sh
-      #     ./test_suite.sh
+         - name: Run Test Suite
+           run: |
+             chmod +x ./test_suite.sh
+             ./test_suite.sh
       
       - name: Cleanup
         if: always()
