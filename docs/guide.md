@@ -58,13 +58,28 @@ npm install -g wscat
 
 This creates the bootstrap peer identity needed for P2P node discovery.
 
-### 2. Start Services
+### 2. Configure Environment
+
+```sh
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```sh
+BOOTSTRAP_PEER_ID=12D3KooWA82ANHZwULUtcjCrCm9hgemvGFsrkViG1p9sKkHPUFpw
+CLUSTER_ID=docker-dev-cluster
+```
+
+> **Important**: `CLUSTER_ID` must be the same across all nodes in the network.
+
+### 3. Start Services
 
 ```sh
 docker-compose up --build
 ```
 
-### 3. Test Everything
+### 4. Test Everything
 
 ```sh
 ./test_suite.sh
