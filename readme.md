@@ -138,12 +138,27 @@ For detailed setup instructions, configuration options, API reference, and troub
 # 1. Generate bootstrap identity
 ./script/generate-identity.sh
 
-# 2. Start all services
+# 2. Configure environment (optional - defaults provided)
+cp .env.example .env
+# Edit .env if needed
+
+# 3. Start all services
 docker-compose up --build -d
 
-# 3. Test the setup
+# 4. Test the setup
 ./test_suite.sh
 ```
+
+### Environment Configuration
+
+Copy `.env.example` to `.env` and customize as needed:
+
+```sh
+BOOTSTRAP_PEER_ID=12D3KooWA82ANHZwULUtcjCrCm9hgemvGFsrkViG1p9sKkHPUFpw
+CLUSTER_ID=docker-dev-cluster
+```
+
+> **Important**: `CLUSTER_ID` must be the same across all nodes in the network.
 
 ## Available Commands
 
