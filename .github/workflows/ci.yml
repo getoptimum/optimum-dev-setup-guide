@@ -127,10 +127,10 @@ jobs:
             echo "P2P node health check failed - continuing with test suite"
           fi
       
-         - name: Run Test Suite
-           run: |
-             chmod +x ./test_suite.sh
-             ./test_suite.sh
+      - name: Run Test Suite
+        run: |
+          chmod +x ./test_suite.sh
+          ./test_suite.sh
       
       - name: Cleanup
         if: always()
