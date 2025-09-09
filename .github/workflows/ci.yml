@@ -95,44 +95,72 @@ jobs:
       - name: Generate P2P Identity
         run: |
           chmod +x ./script/generate-identity.sh
-          ./script/generate-identity.sh
+          # Generate identity and capture the BOOTSTRAP_PEER_ID
+          source ./script/generate-identity.sh
+          echo "BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID" >> $GITHUB_ENV
           echo "P2P identity generated successfully"
       
       - name: Start Services
         run: |
-          docker-compose up --build -d
+          echo "Starting services with BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID"
+          BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID docker-compose up --build -d
           echo "Services started successfully"
       
       - name: Wait for Services
         run: |
           echo "Waiting for services to be ready..."
-          sleep 45
+          sleep 60
           docker-compose ps
           echo "Checking service logs..."
-          docker-compose logs --tail=20
+          docker-compose logs --tail=30
       
-      - name: Test API Endpoints
+      - name: Health Check Services
         run: |
-          echo "Testing proxy health..."
-          if curl -f http://localhost:8081/api/v1/health; then
-            echo "Proxy health check passed"
-          else
-            echo "Proxy health check failed - continuing with test suite"
+          echo "Waiting for services to be healthy..."
+          max_attempts=30
+          attempt=1
+          
+          # Wait for proxy to be ready
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f http://localhost:8081/api/v1/health >/dev/null 2>&1; then
+              echo "Proxy is ready (attempt $attempt)"
+              break
+            fi
+            echo "Waiting for proxy... (attempt $attempt/$max_attempts)"
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "Proxy failed to start after $max_attempts attempts"
+            docker-compose logs proxy-1
+            exit 1
           fi
           
-          echo "Testing P2P node health..."
-          if curl -f http://localhost:9091/api/v1/health; then
-            echo "P2P node health check passed"
-          else
-            echo "P2P node health check failed - continuing with test suite"
+          # Wait for P2P node to be ready
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f http://localhost:9091/api/v1/health >/dev/null 2>&1; then
+              echo "P2P node is ready (attempt $attempt)"
+              break
+            fi
+            echo "Waiting for P2P node... (attempt $attempt/$max_attempts)"
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "P2P node failed to start after $max_attempts attempts"
+            docker-compose logs p2pnode-1
+            exit 1
           fi
+          
+          echo "All services are healthy and ready!"
       
-      # TODO: Fix test suite - currently reports 7 failures but marks as successful
-      # Issue: https://github.com/getoptimum/optimum-dev-setup-guide/issues/33
-      # - name: Run Test Suite
-      #   run: |
-      #     chmod +x ./test_suite.sh
-      #     ./test_suite.sh
+      - name: Run Test Suite
+        run: |
+          chmod +x ./test_suite.sh
+          ./test_suite.sh
       
       - name: Cleanup
         if: always()
