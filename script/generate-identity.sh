@@ -33,19 +33,30 @@ KEY_FILE="$IDENTITY_DIR/p2p.key"
 # Check if identity already exists
 if [ -f "$KEY_FILE" ]; then
     print_warning "P2P identity already exists at $KEY_FILE"
-    read -p "Delete existing identity and generate new one? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        rm -rf "$IDENTITY_DIR"
-        print_status "Deleted existing identity"
-    else
-        print_status "Using existing identity"
+    # In CI environment, always use existing identity
+    if [ "$CI" = "true" ] || [ "$GITHUB_ACTIONS" = "true" ]; then
+        print_status "CI environment detected - using existing identity"
         # Extract and export existing Peer ID
         PEER_ID=$(cat "$KEY_FILE" | grep -o '"ID":"[^"]*"' | cut -d'"' -f4)
         export BOOTSTRAP_PEER_ID="$PEER_ID"
         print_success "BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID"
         echo "export BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID"
         exit 0
+    else
+        read -p "Delete existing identity and generate new one? (y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            rm -rf "$IDENTITY_DIR"
+            print_status "Deleted existing identity"
+        else
+            print_status "Using existing identity"
+            # Extract and export existing Peer ID
+            PEER_ID=$(cat "$KEY_FILE" | grep -o '"ID":"[^"]*"' | cut -d'"' -f4)
+            export BOOTSTRAP_PEER_ID="$PEER_ID"
+            print_success "BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID"
+            echo "export BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID"
+            exit 0
+        fi
     fi
 fi
 
