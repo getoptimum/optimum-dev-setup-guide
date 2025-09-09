@@ -123,16 +123,16 @@ jobs:
           # Wait for proxy to be ready
           while [ $attempt -le $max_attempts ]; do
             if curl -f http://localhost:8081/api/v1/health >/dev/null 2>&1; then
-              echo "✅ Proxy is ready (attempt $attempt)"
+              echo "Proxy is ready (attempt $attempt)"
               break
             fi
-            echo "⏳ Waiting for proxy... (attempt $attempt/$max_attempts)"
+            echo "Waiting for proxy... (attempt $attempt/$max_attempts)"
             sleep 10
             attempt=$((attempt + 1))
           done
           
           if [ $attempt -gt $max_attempts ]; then
-            echo "❌ Proxy failed to start after $max_attempts attempts"
+            echo "Proxy failed to start after $max_attempts attempts"
             docker-compose logs proxy-1
             exit 1
           fi
@@ -141,21 +141,21 @@ jobs:
           attempt=1
           while [ $attempt -le $max_attempts ]; do
             if curl -f http://localhost:9091/api/v1/health >/dev/null 2>&1; then
-              echo "✅ P2P node is ready (attempt $attempt)"
+              echo "P2P node is ready (attempt $attempt)"
               break
             fi
-            echo "⏳ Waiting for P2P node... (attempt $attempt/$max_attempts)"
+            echo "Waiting for P2P node... (attempt $attempt/$max_attempts)"
             sleep 10
             attempt=$((attempt + 1))
           done
           
           if [ $attempt -gt $max_attempts ]; then
-            echo "❌ P2P node failed to start after $max_attempts attempts"
+            echo "P2P node failed to start after $max_attempts attempts"
             docker-compose logs p2pnode-1
             exit 1
           fi
           
-          echo "🎉 All services are healthy and ready!"
+          echo "All services are healthy and ready!"
       
       - name: Run Test Suite
         run: |
