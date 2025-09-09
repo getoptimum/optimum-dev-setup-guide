@@ -78,15 +78,12 @@ services:
   p2pnode-2:
     image: 'getoptimum/p2pnode:latest'
     platform: linux/amd64
-    volumes:
-      - ./identity:/identity
     environment:
       - LOG_LEVEL=debug
       - CLUSTER_ID=p2pnode-2
       - NODE_MODE=optimum # options: "gossipsub", "optimum"
       - SIDECAR_PORT=33212 # default port for sidecar is 33212
       - API_PORT=9090 # default port for API is 9090
-      - IDENTITY_DIR=/identity
       # configuration for gossipsub
       # - GOSSIPSUB_PORT=6060 # default port for gossipsub is 6060
       # - GOSSIPSUB_MAX_MSG_SIZE=1048576 # 1MB
@@ -114,15 +111,12 @@ services:
   p2pnode-3:
     image: 'getoptimum/p2pnode:latest'
     platform: linux/amd64
-    volumes:
-      - ./identity:/identity
     environment:
       - LOG_LEVEL=debug
       - CLUSTER_ID=p2pnode-3
       - NODE_MODE=optimum # options: "gossipsub", "optimum"
       - SIDECAR_PORT=33212 # default port for sidecar is 33212
       - API_PORT=9090 # default port for API is 9090
-      - IDENTITY_DIR=/identity
       # configuration for gossipsub
       # - GOSSIPSUB_PORT=6060 # default port for gossipsub is 6060
       # - GOSSIPSUB_MAX_MSG_SIZE=1048576 # 1MB
@@ -151,15 +145,12 @@ services:
   p2pnode-4:
     image: 'getoptimum/p2pnode:latest'
     platform: linux/amd64
-    volumes:
-      - ./identity:/identity
     environment:
       - LOG_LEVEL=debug
       - CLUSTER_ID=p2pnode-4
       - NODE_MODE=optimum # options: "gossipsub", "optimum"
       - SIDECAR_PORT=33212 # default port for sidecar is 33212
       - API_PORT=9090 # default port for API is 9090
-      - IDENTITY_DIR=/identity
       # configuration for gossipsub
       # - GOSSIPSUB_PORT=6060 # default port for gossipsub is 6060
       # - GOSSIPSUB_MAX_MSG_SIZE=1048576 # 1MB
