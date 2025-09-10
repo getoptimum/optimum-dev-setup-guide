@@ -149,8 +149,13 @@ func main() {
 		}
 		for i := 0; i < *count; i++ {
 			var data []byte
+                        currentTime := time.Now().UnixNano()
 			if *count == 1 {
-				data = []byte(*message)
+                                // Create the prefix string and convert it to bytes
+		                prefix := fmt.Sprintf("[%d %d] ", currentTime, len(*message))
+                                prefixBytes := []byte(prefix)
+                                // Prepend the prefixBytes to your existing data
+                                data = append(prefixBytes, *message...)
 			} else {
 				// generate secure random 4-byte hex
 				randomBytes := make([]byte, 4)
@@ -158,7 +163,7 @@ func main() {
 					log.Fatalf("failed to generate random bytes: %v", err)
 				}
 				randomSuffix := hex.EncodeToString(randomBytes)
-				data = []byte(fmt.Sprintf("P2P message %d - %s", i+1, randomSuffix))
+				data = []byte(fmt.Sprintf("[%d %d] %d - %s XXX", currentTime, len(randomSuffix), i+1, randomSuffix))
 			}
 
 			pubReq := &protobuf.Request{
@@ -190,7 +195,12 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 			return
 		}
 		n := atomic.AddInt32(counter, 1)
-		fmt.Printf("[%d] Received message: %q\n", n, string(p2pMessage.Message))
+
+                currentTime := time.Now().UnixNano()
+                messageSize := len(p2pMessage.Message)
+
+		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
+		fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
 		handleGossipSubTrace(resp.GetData())
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
