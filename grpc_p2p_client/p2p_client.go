@@ -16,10 +16,13 @@ import (
 	"syscall"
 	"time"
 
+	protobuf "p2p_client/grpc"
+	optsub "p2p_client/grpc/mump2p_trace"
+
+	"github.com/gogo/protobuf/proto"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	protobuf "p2p_client/grpc"
 )
 
 // P2PMessage represents a message structure used in P2P communication
@@ -28,40 +31,6 @@ type P2PMessage struct {
 	Topic        string // Topic name where the message was published
 	Message      []byte // Actual message data
 	SourceNodeID string // ID of the node that sent the message (we don't need it in future, it is just for debug purposes)
-}
-
-// TraceData represents structured trace information for analysis
-type TraceData struct {
-	Event          string    `json:"event"`
-	Timestamp      time.Time `json:"timestamp"`
-	MessageID      string    `json:"message_id,omitempty"`
-	Topic          string    `json:"topic,omitempty"`
-	NodeID         string    `json:"node_id,omitempty"`
-	LatencyMs      int       `json:"latency_ms,omitempty"`
-	BandwidthBytes int       `json:"bandwidth_bytes,omitempty"`
-	ShardID        string    `json:"shard_id,omitempty"`
-	ShardIndex     int       `json:"shard_index,omitempty"`
-	TotalShards    int       `json:"total_shards,omitempty"`
-	Redundancy     float64   `json:"redundancy,omitempty"`
-	Protocol       string    `json:"protocol,omitempty"`
-}
-
-// GossipSubTraceData represents GossipSub-specific trace information
-type GossipSubTraceData struct {
-	TraceData
-	PeerID         string `json:"peer_id,omitempty"`
-	MessageSize    int    `json:"message_size,omitempty"`
-	DeliveryStatus string `json:"delivery_status,omitempty"`
-	Hops           int    `json:"hops,omitempty"`
-}
-
-// OptimumP2PTraceData represents OptimumP2P-specific trace information
-type OptimumP2PTraceData struct {
-	TraceData
-	CodedShards        int     `json:"coded_shards,omitempty"`
-	ReceivedShards     int     `json:"received_shards,omitempty"`
-	ReconstructionTime int     `json:"reconstruction_time_ms,omitempty"`
-	Efficiency         float64 `json:"efficiency,omitempty"`
 }
 
 // Command possible operation that sidecar may perform with p2p node
@@ -232,34 +201,54 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 	}
 }
 
-// handleGossipSubTrace parses and displays GossipSub trace data
-func handleGossipSubTrace(data []byte) {
-	// The trace data is protobuf binary from libp2p-pubsub TraceEvent
-	// For now, display the raw binary data as this contains valuable metrics
-	// Future: Could unmarshal pb.TraceEvent if protobuf definitions are available
-	fmt.Printf("[TRACE] GossipSub trace received (protobuf binary): %d bytes\n", len(data))
-
-	// Try to parse as JSON for structured trace data (fallback/future compatibility)
-	var gossipSubTrace GossipSubTraceData
-	if err := json.Unmarshal(data, &gossipSubTrace); err == nil {
-		fmt.Printf("[TRACE] GossipSub %s: peer=%s, latency=%dms, size=%d bytes, hops=%d\n",
-			gossipSubTrace.Event, gossipSubTrace.PeerID, gossipSubTrace.LatencyMs,
-			gossipSubTrace.MessageSize, gossipSubTrace.Hops)
+func headHex(b []byte, n int) string {
+	if len(b) > n {
+		b = b[:n]
 	}
+	return hex.EncodeToString(b)
 }
 
-// handleOptimumP2PTrace parses and displays OptimumP2P trace data
-func handleOptimumP2PTrace(data []byte) {
-	// The trace data is protobuf binary from optimum-p2p TraceEvent
-	// For now, display the raw binary data as this contains valuable metrics
-	// Future: Could unmarshal optimum_pb.TraceEvent if protobuf definitions are available
-	fmt.Printf("[TRACE] OptimumP2P trace received (protobuf binary): %d bytes\n", len(data))
-
-	// Try to parse as JSON for structured trace data (fallback/future compatibility)
-	var optimumTrace OptimumP2PTraceData
-	if err := json.Unmarshal(data, &optimumTrace); err == nil {
-		fmt.Printf("[TRACE] OptimumP2P %s: shard=%s (%d/%d), redundancy=%.2f, efficiency=%.2f, latency=%dms\n",
-			optimumTrace.Event, optimumTrace.ShardID, optimumTrace.ReceivedShards,
-			optimumTrace.CodedShards, optimumTrace.Redundancy, optimumTrace.Efficiency, optimumTrace.LatencyMs)
+func handleGossipSubTrace(data []byte) {
+	evt := &pubsubpb.TraceEvent{}
+	if err := proto.Unmarshal(data, evt); err != nil {
+		fmt.Printf("[TRACE] GossipSub decode error: %v raw=%dB head=%s\n",
+			err, len(data), headHex(data, 64))
+		return
 	}
+
+	ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
+	// print type
+	fmt.Printf("[TRACE] GossipSub type=%s ts=%s\n", evt.GetType().String(), ts)
+	jb, _ := json.Marshal(evt)
+	fmt.Printf("[TRACE] GossipSub JSON: %s\n", string(jb))
+}
+
+func handleOptimumP2PTrace(data []byte) {
+	evt := &optsub.TraceEvent{}
+	if err := proto.Unmarshal(data, evt); err != nil {
+		fmt.Printf("[TRACE] OptimumP2P decode error: %v\n", err)
+		return
+	}
+
+	// human-readable timestamp
+	ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
+
+	// print type
+	typeStr := optsub.TraceEvent_Type_name[int32(evt.GetType())]
+	fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s\n", typeStr, ts)
+
+	// if shard-related
+	switch evt.GetType() {
+	case optsub.TraceEvent_NEW_SHARD:
+		fmt.Printf("  NEW_SHARD id=%x coeff=%x\n", evt.GetNewShard().GetMessageID(), evt.GetNewShard().GetCoefficients())
+	case optsub.TraceEvent_DUPLICATE_SHARD:
+		fmt.Printf("  DUPLICATE_SHARD id=%x\n", evt.GetDuplicateShard().GetMessageID())
+	case optsub.TraceEvent_UNHELPFUL_SHARD:
+		fmt.Printf("  UNHELPFUL_SHARD id=%x\n", evt.GetUnhelpfulShard().GetMessageID())
+	case optsub.TraceEvent_UNNECESSARY_SHARD:
+		fmt.Printf("  UNNECESSARY_SHARD id=%x\n", evt.GetUnnecessaryShard().GetMessageID())
+	}
+
+	jb, _ := json.Marshal(evt)
+	fmt.Printf("[TRACE] OptimumP2P JSON: %s\n", string(jb))
 }
