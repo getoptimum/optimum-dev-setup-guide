@@ -58,13 +58,28 @@ npm install -g wscat
 
 This creates the bootstrap peer identity needed for P2P node discovery.
 
-### 2. Start Services
+### 2. Configure Environment
+
+```sh
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```sh
+BOOTSTRAP_PEER_ID=12D3KooWA82ANHZwULUtcjCrCm9hgemvGFsrkViG1p9sKkHPUFpw
+CLUSTER_ID=docker-dev-cluster
+```
+
+> **Important**: `CLUSTER_ID` must be the same across all nodes in the network.
+
+### 3. Start Services
 
 ```sh
 docker-compose up --build
 ```
 
-### 3. Test Everything
+### 4. Test Everything
 
 ```sh
 ./test_suite.sh
@@ -182,6 +197,24 @@ You can use this setup to:
 
 1. **Via Proxy** (recommended): Connect to proxies for managed access with authentication and rate limiting
 2. **Direct P2P**: Connect directly to P2P nodes for low-level integration
+
+### Connecting to Remote Clusters
+
+OptimumP2P supports connecting to remote P2P clusters for distributed testing and production use:
+
+```bash
+# Connect to remote cluster nodes
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=distributed-topic --addr=remote-node-1:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic --addr=remote-node-2:33212
+
+# Example with testnet cluster
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=testnet-demo --addr=34.124.246.10:33212
+```
+
+**Key Points:**
+- Remote nodes use the standard sidecar port `33212`
+- Ensure you have the correct `CLUSTER_ID` for the target cluster
+- Messages will propagate across the entire distributed mesh network
 
 ---
 
@@ -604,11 +637,19 @@ This is useful for:
 
 ##### Subscribe to a Topic
 
+**Local Docker Development:**
 ```sh
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=localhost:33221
 ```
 
 > **Note:** Here, `localhost:33221` is the mapped port for `p2pnode-1` (33221:33212) in docker-compose.
+
+**External/Remote P2P Nodes:**
+```sh
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=34.124.246.10:33212
+```
+
+> **Note:** External nodes use the standard sidecar port `33212` directly.
 
 response
 
@@ -621,11 +662,19 @@ Received message: "random2"
 
 ##### Publish to a Topic
 
+**Local Docker Development:**
 ```sh
 ./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=localhost:33222
 ```
 
 > **Note:** Here, `localhost:33222` is the mapped port for `p2pnode-2` (33222:33212) in docker-compose.
+
+**External/Remote P2P Nodes:**
+```sh
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=35.197.161.77:33212
+```
+
+> **Note:** External nodes use the standard sidecar port `33212` directly.
 
 response
 

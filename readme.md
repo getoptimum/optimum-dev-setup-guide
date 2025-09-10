@@ -138,12 +138,27 @@ For detailed setup instructions, configuration options, API reference, and troub
 # 1. Generate bootstrap identity
 ./script/generate-identity.sh
 
-# 2. Start all services
+# 2. Configure environment (optional - defaults provided)
+cp .env.example .env
+# Edit .env if needed
+
+# 3. Start all services
 docker-compose up --build -d
 
-# 3. Test the setup
+# 4. Test the setup
 ./test_suite.sh
 ```
+
+### Environment Configuration
+
+Copy `.env.example` to `.env` and customize as needed:
+
+```sh
+BOOTSTRAP_PEER_ID=12D3KooWA82ANHZwULUtcjCrCm9hgemvGFsrkViG1p9sKkHPUFpw
+CLUSTER_ID=docker-dev-cluster
+```
+
+> **Important**: `CLUSTER_ID` must be the same across all nodes in the network.
 
 ## Available Commands
 
@@ -233,11 +248,29 @@ The P2P client supports these flags:
 
 #### Port Mapping
 
+**Local Docker Development:**
 The development setup exposes these P2P node ports:
 - `127.0.0.1:33221` → p2pnode-1 (sidecar port 33212)
 - `127.0.0.1:33222` → p2pnode-2 (sidecar port 33212)
 - `127.0.0.1:33223` → p2pnode-3 (sidecar port 33212)
 - `127.0.0.1:33224` → p2pnode-4 (sidecar port 33212)
+
+**External/Remote P2P Nodes:**
+For connecting to external P2P nodes or remote clusters, use the standard sidecar port `33212`:
+
+```bash
+# Connect to external P2P nodes
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=node1.example.com:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=node2.example.com:33212
+
+# Example with real testnet nodes
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=demo --addr=34.124.246.10:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=demo --addr=35.197.161.77:33212
+```
+
+**Port Usage Summary:**
+- **Local Docker**: Use `127.0.0.1:33221-33224` (Docker port forwarding)
+- **External/Remote**: Use `node-ip:33212` (standard sidecar port)
 
 
 ## Developer Tools
