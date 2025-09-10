@@ -127,7 +127,7 @@ After building with `make build`, you can use the binaries directly:
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
 
 # Publish multiple messages with delay
-./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic --addr=127.0.0.1:33222 -count=5 -sleep=1s
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg="Random Message" --addr=127.0.0.1:33222 -count=5 -sleep=1s
 ```
 
 **Example Output:**
@@ -205,7 +205,7 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
 ```bash
 # Connect to remote cluster nodes
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=distributed-topic --addr=remote-node-1:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic --addr=remote-node-2:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic -msg="Hello World" --addr=remote-node-2:33212
 
 # Example with testnet cluster
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=testnet-demo --addr=34.124.246.10:33212
@@ -664,14 +664,14 @@ Received message: "random2"
 
 **Local Docker Development:**
 ```sh
-./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=localhost:33222
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=localhost:33222
 ```
 
 > **Note:** Here, `localhost:33222` is the mapped port for `p2pnode-2` (33222:33212) in docker-compose.
 
 **External/Remote P2P Nodes:**
 ```sh
-./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=35.197.161.77:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=35.197.161.77:33212
 ```
 
 > **Note:** External nodes use the standard sidecar port `33212` directly.
@@ -697,7 +697,7 @@ The P2P client supports various publishing options for testing:
 ./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic -msg="Hello World" --addr=127.0.0.1:33221
 
 # Publish multiple messages with delay
-./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic --addr=127.0.0.1:33221 -count=10 -sleep=1s
+./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic -msg="Random Message" --addr=127.0.0.1:33221 -count=10 -sleep=1s
 ```
 
 #### Available Flags
