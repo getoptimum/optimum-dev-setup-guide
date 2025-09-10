@@ -218,9 +218,9 @@ func handleGossipSubTrace(data []byte) {
 
 	ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
 	// print type
-	fmt.Printf("[TRACE] GossipSub type=%s ts=%s\n", evt.GetType().String(), ts)
+	fmt.Printf("[TRACE] GossipSub type=%s ts=%s size=%dB\n", evt.GetType().String(), ts, len(data))
 	jb, _ := json.Marshal(evt)
-	fmt.Printf("[TRACE] GossipSub JSON: %s\n", string(jb))
+	fmt.Printf("[TRACE] GossipSub JSON (%dB): %s\n", len(jb), string(jb))
 }
 
 func handleOptimumP2PTrace(data []byte) {
@@ -235,7 +235,7 @@ func handleOptimumP2PTrace(data []byte) {
 
 	// print type
 	typeStr := optsub.TraceEvent_Type_name[int32(evt.GetType())]
-	fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s\n", typeStr, ts)
+	fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s size=%dB\n", typeStr, ts, len(data))
 
 	// if shard-related
 	switch evt.GetType() {
@@ -250,5 +250,5 @@ func handleOptimumP2PTrace(data []byte) {
 	}
 
 	jb, _ := json.Marshal(evt)
-	fmt.Printf("[TRACE] OptimumP2P JSON: %s\n", string(jb))
+	fmt.Printf("[TRACE] OptimumP2P JSON (%dB): %s\n", len(jb), string(jb))
 }
