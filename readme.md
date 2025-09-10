@@ -71,7 +71,7 @@ make publish 127.0.0.1:33221 testtopic random 10 1s
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
 
 # Publish multiple messages with delay
-./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic --addr=127.0.0.1:33222 -count=5 -sleep=1s
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg="Random Message" --addr=127.0.0.1:33222 -count=5 -sleep=1s
 ```
 
 **Example Output:**
@@ -185,11 +185,11 @@ Direct binary usage (recommended):
   ./grpc_p2p_client/p2p-client -mode=subscribe -topic="testtopic" --addr="127.0.0.1:33221"
 
   # Publish messages
-  ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" --addr="127.0.0.1:33221"
+  ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" -msg="Hello World" --addr="127.0.0.1:33221"
   ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" -msg="Hello World" --addr="127.0.0.1:33221"
 
   # Publish multiple messages with options
-  ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" --addr="127.0.0.1:33221" -count=10 -sleep=1s
+  ./grpc_p2p_client/p2p-client -mode=publish -topic="testtopic" -msg="Random Message" --addr="127.0.0.1:33221" -count=10 -sleep=1s
 ```
 
 ### Working Makefile Commands
@@ -233,7 +233,7 @@ make build
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
 
 # Publish multiple random messages with delay
-./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic --addr=127.0.0.1:33222 -count=5 -sleep=1s
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg="Random Message" --addr=127.0.0.1:33222 -count=5 -sleep=1s
 ```
 
 #### Command Options
@@ -261,11 +261,11 @@ For connecting to external P2P nodes or remote clusters, use the standard sideca
 ```bash
 # Connect to external P2P nodes
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=node1.example.com:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=node2.example.com:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=node2.example.com:33212
 
 # Example with real testnet nodes
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=demo --addr=34.124.246.10:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=demo --addr=35.197.161.77:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=demo -msg="Hello World" --addr=35.197.161.77:33212
 ```
 
 **Port Usage Summary:**
