@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -15,6 +16,7 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+        "regexp"
 
 	protobuf "p2p_client/grpc"
 	optsub "p2p_client/grpc/mump2p_trace"
@@ -148,12 +150,14 @@ func main() {
 			log.Fatalf("−msg is required in publish mode")
 		}
 		for i := 0; i < *count; i++ {
-			start := time.Now()
-			var data []byte
+                        var data []byte
 			currentTime := time.Now().UnixNano()
+	                sender_addr_re := regexp.MustCompile(`\d+\.\d+\.\d+\.\d+`)
+	                sender_addr_info := sender_addr_re.FindString(*addr)
+
 			if *count == 1 {
 				// Create the prefix string and convert it to bytes
-				prefix := fmt.Sprintf("[%d %d] ", currentTime, len(*message))
+				prefix := fmt.Sprintf("sender_addr:%s\t[send_time, size]:[%d, %d]\t", sender_addr_info, currentTime, len(*message))
 				prefixBytes := []byte(prefix)
 				// Prepend the prefixBytes to your existing data
 				data = append(prefixBytes, *message...)
@@ -163,8 +167,8 @@ func main() {
 				if _, err := rand.Read(randomBytes); err != nil {
 					log.Fatalf("failed to generate random bytes: %v", err)
 				}
-				randomSuffix := hex.EncodeToString(randomBytes)
-				data = []byte(fmt.Sprintf("[%d %d] %d - %s XXX", currentTime, len(randomSuffix), i+1, randomSuffix))
+			//	randomSuffix := hex.EncodeToString(randomBytes)
+			//	data = []byte(fmt.Sprintf("[%d %d] %d - %s XXX", currentTime, len(randomSuffix), i+1, randomSuffix))
 			}
 
 			pubReq := &protobuf.Request{
@@ -176,8 +180,10 @@ func main() {
 				log.Fatalf("send publish: %v", err)
 			}
 
-			elapsed := time.Since(start)
-			fmt.Printf("Published %q to %q (took %v)\n", string(data), *topic, elapsed)
+                        sum := sha256.Sum256(data)   // returns []byte
+                        hash := hex.EncodeToString(sum[:])   // returns [32]byte
+
+			fmt.Printf("Publish:\tsender_info:%s, [send_time, size]:[%d, %d]\ttopic:%s\tmsg_hash:%s\n", sender_addr_info, currentTime, len(data), *topic,  string(hash)[:8])
 
 			if *sleep > 0 {
 				time.Sleep(*sleep)
@@ -200,10 +206,21 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 		n := atomic.AddInt32(counter, 1)
 
 		currentTime := time.Now().UnixNano()
-		messageSize := len(p2pMessage.Message)
 
-		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
-		fmt.Printf("Recv message: [%d] [%d %d] %s\n\n", n, currentTime, messageSize, string(p2pMessage.Message))
+		messageSize := len(p2pMessage.Message)
+                sum := sha256.Sum256(p2pMessage.Message)   // returns []byte
+                hash := hex.EncodeToString(sum[:])   // returns [32]byte
+
+	        //send_info_re := regexp.MustCompile(`sender_addr:\d+\.\d+\.\d+\.\d+,\s\[send_time, size]:[%d, %d]`)
+	        send_info_re := regexp.MustCompile(`sender_addr:\d+\.\d+\.\d+\.\d+\t\[send_time, size]:\[\d+,\s\d+\]`)
+	        // Find the first match
+	        send_info := send_info_re.FindString(string(p2pMessage.Message))
+
+	        recv_addr_re := regexp.MustCompile(`\d+\.\d+\.\d+\.\d+`)
+	        recv_addr_info := recv_addr_re.FindString(string(p2pMessage.Message))
+
+		fmt.Printf("Recv:\t[%d]\treceiver_addr:%s\t[recv_time, size]:[%d, %d]\t%s\ttopic:%s\thash:%s\n", n, recv_addr_info, currentTime, messageSize, send_info, p2pMessage.Topic, hash[:8])
+
 	case protobuf.ResponseType_MessageTraceGossipSub:
 		handleGossipSubTrace(resp.GetData())
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
