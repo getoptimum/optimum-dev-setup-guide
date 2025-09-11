@@ -158,7 +158,7 @@ func main() {
 			if *count == 1 {
 				// Create the prefix string and convert it to bytes
 				approx_info_prefix := fmt.Sprintf("sender_addr:%s\t[send_time, size]:[%d, %d]\t", sender_addr_info, currentTime, len(*message))
-                                correct_size := len(approx_info_prefix) + len(*message) +  int((len(approx_info_prefix)+ len(*message))/len(*message))   
+                                correct_size := len(approx_info_prefix) + len(*message) +  1  
 
 				prefix := fmt.Sprintf("sender_addr:%s\t[send_time, size]:[%d, %d]\t", sender_addr_info, currentTime, correct_size)
 				prefixBytes := []byte(prefix)
