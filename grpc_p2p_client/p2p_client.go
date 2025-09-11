@@ -148,14 +148,15 @@ func main() {
 			log.Fatalf("−msg is required in publish mode")
 		}
 		for i := 0; i < *count; i++ {
+			start := time.Now()
 			var data []byte
-                        currentTime := time.Now().UnixNano()
+			currentTime := time.Now().UnixNano()
 			if *count == 1 {
-                                // Create the prefix string and convert it to bytes
-		                prefix := fmt.Sprintf("[%d %d] ", currentTime, len(*message))
-                                prefixBytes := []byte(prefix)
-                                // Prepend the prefixBytes to your existing data
-                                data = append(prefixBytes, *message...)
+				// Create the prefix string and convert it to bytes
+				prefix := fmt.Sprintf("[%d %d] ", currentTime, len(*message))
+				prefixBytes := []byte(prefix)
+				// Prepend the prefixBytes to your existing data
+				data = append(prefixBytes, *message...)
 			} else {
 				// generate secure random 4-byte hex
 				randomBytes := make([]byte, 4)
@@ -174,7 +175,9 @@ func main() {
 			if err := stream.Send(pubReq); err != nil {
 				log.Fatalf("send publish: %v", err)
 			}
-			fmt.Printf("Published %q to %q\n", string(data), *topic)
+
+			elapsed := time.Since(start)
+			fmt.Printf("Published %q to %q (took %v)\n", string(data), *topic, elapsed)
 
 			if *sleep > 0 {
 				time.Sleep(*sleep)
@@ -196,11 +199,11 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 		}
 		n := atomic.AddInt32(counter, 1)
 
-                currentTime := time.Now().UnixNano()
-                messageSize := len(p2pMessage.Message)
+		currentTime := time.Now().UnixNano()
+		messageSize := len(p2pMessage.Message)
 
 		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
-		fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message))
+		fmt.Printf("Recv message: [%d] [%d %d] %s\n\n", n, currentTime, messageSize, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
 		handleGossipSubTrace(resp.GetData())
 	case protobuf.ResponseType_MessageTraceOptimumP2P:

@@ -664,6 +664,38 @@ Received message: "random1"
 Received message: "random2"
 ```
 
+#### Understanding Message Output Format
+
+When subscribing to topics, you'll see detailed message information in this format:
+
+```sh
+Recv message: [1] [1757579641382484000 126] [1757579641203739000 100] bqhn4Yhab4KorTqcHmViooGF3gPmjSwAZon8kjMUGJY8aRoH/ogmuTZ+IHS/xwa1
+meOKYWvJ37ossi5bbMGAg5TgsB0aP61x/Oi
+```
+
+**Message Format Breakdown:**
+
+1. **`[1]`** - **Message Sequence Number**
+   - Incremental counter of received messages
+   - Shows this is the 1st, 2nd, 3rd... message received
+
+2. **`[1757579641382484000 126]`** - **Receive Timestamp & Size**
+   - `1757579641382484000` = **Unix timestamp in nanoseconds** when message was received
+   - `126` = **Total message size** in bytes (including prefix)
+
+3. **`[1757579641203739000 100]`** - **Original Publish Timestamp & Content Size**
+   - `1757579641203739000` = **Unix timestamp in nanoseconds** when message was originally published
+   - `100` = **Original content size** in bytes (before prefix was added)
+
+4. **`bqhn4Yhab4KorTqcHmViooGF3gPmjSwAZon8kjMUGJY8aRoH/ogmuTZ+IHS/xwa1...`** - **Message Content**
+   - The actual message data (base64 encoded random content in this example)
+   - This is the original message content that was published
+
+**Key Insights:**
+- **Network Latency**: ~18ms (difference between publish and receive timestamps)
+- **Message Integrity**: Content size matches original (100 bytes)
+- **Real-time Delivery**: Messages arrive with precise timing information
+
 ##### Publish to a Topic
 
 **Local Docker Development:**
@@ -703,6 +735,27 @@ The P2P client supports various publishing options for testing:
 # Publish multiple messages with delay
 ./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic -msg="Random Message" --addr=127.0.0.1:33221 -count=10 -sleep=1s
 ```
+
+#### Bulk Random Message Publishing
+
+For high-volume testing with random messages:
+
+```sh
+# Publish 50 random messages with 2-second delays
+for i in `seq 1 50`; do 
+  string=$(openssl rand -base64 768 | head -c 100)
+  echo "Publishing message $i: $string"
+  ./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=34.40.4.192:33212 -msg="$string"
+  sleep 2
+done
+```
+
+**Features:**
+- **Random Content**: Each message contains 100 random characters
+- **High Volume**: Publishes 50 messages in sequence
+- **Real-time Feedback**: Shows message number and content being published
+- **Configurable Delay**: 2-second intervals between messages
+- **Remote Testing**: Uses remote P2P node for distributed testing
 
 #### Available Flags
 
