@@ -28,27 +28,56 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
   - [Generate Bootstrap Identity](#1-generate-bootstrap-identity)
-  - [Start Services](#2-start-services)
-  - [Test Everything](#3-test-everything)
+  - [Configure Environment](#2-configure-environment)
+  - [Start Services](#3-start-services)
+  - [Test Everything](#4-test-everything)
+- [Build and Development Commands](#build-and-development-commands)
+  - [Makefile Commands](#makefile-commands)
+  - [Direct Binary Usage](#direct-binary-usage)
 - [Configuration](#configuration)
   - [Proxy Variables](#proxy-variables)
   - [P2P Node Variables](#p2p-node-variables)
   - [One-Command Setup](#one-command-setup-alternative)
-- [Use Cases](#use-cases)
 - [Two Ways to Connect](#two-ways-to-connect)
+- [Architecture Overview](#architecture-overview)
+  - [Core Components](#core-components)
+  - [Communication Flow](#communication-flow)
+  - [Key Features](#key-features)
+- [Setup and Installation](#setup-and-installation)
+  - [Bootstrap Identity Generation](#1-bootstrap-identity-generation)
+  - [Service Startup](#2-service-startup)
+  - [Verification](#3-verification)
 - [API Reference](#api-reference)
   - [Proxy API](#proxy-api)
   - [Proxy gRPC Streaming](#proxy-grpc-streaming)
+  - [Proxy REST API](#proxy-rest-api)
   - [P2P Node API](#p2p-node-api)
+  - [gRPC API](#grpc-api)
 - [Client Tools](#client-tools)
   - [gRPC Proxy Client](#grpc-proxy-client-implementation)
   - [Using P2P Nodes Directly](#using-p2p-nodes-directly-optional--no-proxy)
   - [Publishing Options](#publishing-options)
   - [Inspecting P2P Nodes](#inspecting-p2p-nodes)
   - [Collecting Trace Data for Experiments](#collecting-trace-data-for-experiments)
-- [Troubleshooting](#troubleshooting)
 - [Advanced Configuration](#advanced-configuration)
+  - [Authentication Setup](#authentication-setup-optional)
+  - [Rate Limiting](#rate-limiting)
+  - [P2P Node Configuration](#p2p-node-configuration)
+  - [Proxy Configuration](#proxy-configuration)
 - [Monitoring and Telemetry](#monitoring-and-telemetry)
+  - [Prometheus Metrics](#prometheus-metrics)
+  - [Trace Collection](#trace-collection)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Performance Optimization](#performance-optimization)
+  - [Log Analysis](#log-analysis)
+- [Production Considerations](#production-considerations)
+  - [Security](#security)
+  - [Scalability](#scalability)
+  - [Monitoring](#monitoring)
+- [Developer Tools](#developer-tools)
+  - [CLI Integration](#cli-integration)
+  - [API Clients](#api-clients)
 
 ---
 
@@ -81,18 +110,14 @@ This creates the bootstrap peer identity needed for P2P node discovery.
 
 ### 2. Configure Environment
 
-```sh
-cp .env.example .env
-```
-
-Edit `.env`:
+Create `.env` file with your assigned credentials:
 
 ```sh
-BOOTSTRAP_PEER_ID=12D3KooWA82ANHZwULUtcjCrCm9hgemvGFsrkViG1p9sKkHPUFpw
-CLUSTER_ID=docker-dev-cluster
+BOOTSTRAP_PEER_ID=<your-generated-peer-id>
+CLUSTER_ID=<your-assigned-cluster-id>
 ```
 
-> **Important**: `CLUSTER_ID` must be the same across all nodes in the network.
+> **Note**: Each participant will generate their own unique bootstrap identity and receive their assigned cluster ID. No need to copy from examples - use your specific values.
 
 ### 3. Start Services
 
@@ -205,22 +230,10 @@ curl -sSL https://raw.githubusercontent.com/getoptimum/optimum-dev-setup-guide/m
 
 This downloads and runs the same identity generation script, creating the bootstrap peer identity and setting the environment variable.
 
-## Use Cases
-
-You can use this setup to:
-
-* Test local applications with OptimumP2P
-* Learn publish/subscribe mechanics via REST or WebSocket
-* Simulate client/proxy/node interactions
-* Experiment with clustering, sharding, and thresholds
-
 ## Two Ways to Connect
 
 1. **Via Proxy** (recommended): Connect to proxies for managed access with authentication and rate limiting
 2. **Direct P2P**: Connect directly to P2P nodes for low-level integration
-
-
----
 
 ## Architecture Overview
 
@@ -914,7 +927,7 @@ This provides both human-readable summaries and complete JSON data for detailed 
 For development, authentication is disabled by default. Enable Auth0 JWT authentication by setting environment variables:
 
 ```yaml
-# docker-compose.yml
+# docker-compose-optimum.yml
 environment:
   ENABLE_AUTH: "false"
 ```
