@@ -1,5 +1,25 @@
 # OptimumP2P – Local Development Setup
 
+## **IMPORTANT: Remote P2P Nodes for Distributed Testing**
+
+> **🚨 CRITICAL FOR PARTICIPANTS**: Use these remote nodes for distributed testing and hackathon projects!
+
+### **External/Remote P2P Nodes**
+
+For connecting to external P2P nodes or remote clusters, use the standard sidecar port `33212`:
+
+```bash
+# Connect to external P2P nodes
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=node1.example.com:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=node2.example.com:33212
+```
+
+**Port Usage Summary:**
+- **Local Docker**: Use `127.0.0.1:33221-33224` (Docker port forwarding)
+- **External/Remote**: Use `node-ip:33212` (standard sidecar port)
+
+---
+
 This repository provides a full-stack setup for running OptimumP2P, a high-performance RLNC-enhanced pubsub protocol, along with multiple proxies for scalable message routing.
 This repository provides a sample Docker Compose setup for deploying the OptimumP2P messaging infrastructure locally.
 It demonstrates how partners can configure proxies and P2P nodes, and serves as a reference architecture for integration, testing, and scaling into production.
@@ -255,22 +275,6 @@ The development setup exposes these P2P node ports:
 - `127.0.0.1:33223` → p2pnode-3 (sidecar port 33212)
 - `127.0.0.1:33224` → p2pnode-4 (sidecar port 33212)
 
-**External/Remote P2P Nodes:**
-For connecting to external P2P nodes or remote clusters, use the standard sidecar port `33212`:
-
-```bash
-# Connect to external P2P nodes
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=node1.example.com:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=node2.example.com:33212
-
-# Example with real testnet nodes
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=demo --addr=34.124.246.10:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=demo -msg="Hello World" --addr=35.197.161.77:33212
-```
-
-**Port Usage Summary:**
-- **Local Docker**: Use `127.0.0.1:33221-33224` (Docker port forwarding)
-- **External/Remote**: Use `node-ip:33212` (standard sidecar port)
 
 
 ## Developer Tools

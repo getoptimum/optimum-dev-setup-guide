@@ -1,5 +1,26 @@
 # OptimumP2P Development Setup - Complete Guide
 
+## **IMPORTANT: Remote P2P Clusters for Distributed Testing**
+
+> **🚨 CRITICAL FOR PARTICIPANTS**: Use these remote clusters for distributed testing and hackathon projects!
+
+### **Connecting to Remote Clusters**
+
+OptimumP2P supports connecting to remote P2P clusters for distributed testing and production use:
+
+```bash
+# Connect to remote cluster nodes
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=distributed-topic --addr=remote-node-1:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic -msg="Hello World" --addr=remote-node-2:33212
+```
+
+**Key Points:**
+- Remote nodes use the standard sidecar port `33212`
+- Ensure you have the correct `CLUSTER_ID` for the target cluster
+- Messages will propagate across the entire distributed mesh network
+
+---
+
 *Complete guide for setting up and using the OptimumP2P development environment.*
 
 ## Table of Contents
@@ -198,23 +219,6 @@ You can use this setup to:
 1. **Via Proxy** (recommended): Connect to proxies for managed access with authentication and rate limiting
 2. **Direct P2P**: Connect directly to P2P nodes for low-level integration
 
-### Connecting to Remote Clusters
-
-OptimumP2P supports connecting to remote P2P clusters for distributed testing and production use:
-
-```bash
-# Connect to remote cluster nodes
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=distributed-topic --addr=remote-node-1:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic -msg="Hello World" --addr=remote-node-2:33212
-
-# Example with testnet cluster
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=testnet-demo --addr=34.124.246.10:33212
-```
-
-**Key Points:**
-- Remote nodes use the standard sidecar port `33212`
-- Ensure you have the correct `CLUSTER_ID` for the target cluster
-- Messages will propagate across the entire distributed mesh network
 
 ---
 
