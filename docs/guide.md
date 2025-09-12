@@ -122,7 +122,7 @@ CLUSTER_ID=<your-assigned-cluster-id>
 ### 3. Start Services
 
 ```sh
-docker-compose up --build
+docker-compose -f docker-compose-optimum.yml up --build
 ```
 
 ### 4. Test Everything
@@ -284,10 +284,10 @@ Generate the P2P bootstrap identity for node discovery:
 
 ```sh
 # Start all services in detached mode
-docker-compose up --build -d
+docker-compose -f docker-compose-optimum.yml up --build -d
 
 # Check service status
-docker-compose ps
+docker-compose -f docker-compose-optimum.yml ps
 ```
 
 **Expected Services:**
@@ -1034,7 +1034,7 @@ Recv message: [1] [1757579641382484000 126] [1757579641203739000 100] Hello Worl
 
 #### Services Not Starting
 
-**Problem:** `docker-compose up` fails with identity errors
+**Problem:** `docker-compose -f docker-compose-optimum.yml up` fails with identity errors
 
 **Solution:**
 ```sh
