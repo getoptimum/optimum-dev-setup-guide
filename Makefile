@@ -33,11 +33,11 @@ help: ## Show help
 	@echo "  $(P2P_CLIENT) -mode=subscribe -topic=\"testtopic\" --addr=\"127.0.0.1:33221\""
 	@echo ""
 	@echo "  # Publish messages"
-	@echo "  $(P2P_CLIENT) -mode=publish -topic=\"testtopic\" --addr=\"127.0.0.1:33221\""
 	@echo "  $(P2P_CLIENT) -mode=publish -topic=\"testtopic\" -msg=\"Hello World\" --addr=\"127.0.0.1:33221\""
+	@echo "  $(P2P_CLIENT) -mode=publish -topic=\"testtopic\" -msg=\"Random Message\" --addr=\"127.0.0.1:33221\""
 	@echo ""
 	@echo "  # Publish multiple messages with options"
-	@echo "  $(P2P_CLIENT) -mode=publish -topic=\"testtopic\" --addr=\"127.0.0.1:33221\" -count=10 -sleep=1s"
+	@echo "  $(P2P_CLIENT) -mode=publish -topic=\"testtopic\" -msg=\"Random Message\" --addr=\"127.0.0.1:33221\" -count=10 -sleep=1s"
 
 build: $(P2P_CLIENT) $(PROXY_CLIENT) ## Build all client binaries
 	@echo "All clients built successfully"
@@ -104,10 +104,12 @@ lint: ## Run golangci-lint
 test-docker: setup-scripts ## Test Docker Compose setup
 	@echo "Testing Docker Compose setup..."
 	@./script/generate-identity.sh
-	@docker-compose up --build -d
+	@docker-compose -f docker-compose-optimum.yml up --build -d
+	# Alternative: Use GossipSub protocol instead
+	# @docker-compose -f docker-compose-gossipsub.yml up --build -d
 	@echo "Waiting for services to be ready..."
 	@sleep 30
-	@docker-compose ps
+	@docker-compose -f docker-compose-optimum.yml ps
 	@echo "Running test suite..."
 	@./test_suite.sh
 	@echo "Docker setup test completed"
@@ -117,7 +119,9 @@ test-scripts: setup-scripts ## Test shell scripts
 
 validate: ## Validate configuration files
 	@echo "Validating configuration files..."
-	@docker-compose config
+	@docker-compose -f docker-compose-optimum.yml config
+	# Alternative: Validate GossipSub configuration instead
+	# @docker-compose -f docker-compose-gossipsub.yml config
 	@cd $(P2P_CLIENT_DIR) && go mod verify
 	@cd $(PROXY_CLIENT_DIR) && go mod verify
 	@cd keygen && go mod verify

@@ -103,16 +103,16 @@ jobs:
       - name: Start Services
         run: |
           echo "Starting services with BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID"
-          BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID docker-compose up --build -d
+          BOOTSTRAP_PEER_ID=$BOOTSTRAP_PEER_ID docker-compose -f docker-compose-optimum.yml up --build -d
           echo "Services started successfully"
       
       - name: Wait for Services
         run: |
           echo "Waiting for services to be ready..."
           sleep 60
-          docker-compose ps
+          docker-compose -f docker-compose-optimum.yml ps
           echo "Checking service logs..."
-          docker-compose logs --tail=30
+          docker-compose -f docker-compose-optimum.yml logs --tail=30
       
       - name: Health Check Services
         run: |
@@ -133,7 +133,7 @@ jobs:
           
           if [ $attempt -gt $max_attempts ]; then
             echo "Proxy failed to start after $max_attempts attempts"
-            docker-compose logs proxy-1
+            docker-compose -f docker-compose-optimum.yml logs proxy-1
             exit 1
           fi
           
@@ -151,7 +151,7 @@ jobs:
           
           if [ $attempt -gt $max_attempts ]; then
             echo "P2P node failed to start after $max_attempts attempts"
-            docker-compose logs p2pnode-1
+            docker-compose -f docker-compose-optimum.yml logs p2pnode-1
             exit 1
           fi
           
@@ -165,7 +165,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker-compose down -v
+          docker-compose -f docker-compose-optimum.yml down -v
           echo "Cleanup completed"
 
   # Test shell scripts
@@ -208,8 +208,9 @@ jobs:
       
       - name: Validate Docker Compose
         run: |
-          docker-compose config
-          echo "Docker Compose configuration is valid"
+          docker-compose -f docker-compose-optimum.yml config
+          docker-compose -f docker-compose-gossipsub.yml config
+          echo "Docker Compose configurations are valid"
       
       - name: Validate Go Modules
         run: |
