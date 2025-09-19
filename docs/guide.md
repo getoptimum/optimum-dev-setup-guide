@@ -1,5 +1,26 @@
 # OptimumP2P Development Setup - Complete Guide
 
+## **IMPORTANT: Remote P2P Clusters for Distributed Testing**
+
+> **🚨 CRITICAL FOR PARTICIPANTS**: Use these remote clusters for distributed testing and hackathon projects!
+
+### **Connecting to Remote Clusters**
+
+OptimumP2P supports connecting to remote P2P clusters for distributed testing and production use:
+
+```bash
+# Connect to remote cluster nodes
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=distributed-topic --addr=remote-node-1:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic -msg="Hello World" --addr=remote-node-2:33212
+```
+
+**Key Points:**
+- Remote nodes use the standard sidecar port `33212`
+- Ensure you have the correct `CLUSTER_ID` for the target cluster
+- Messages will propagate across the entire distributed mesh network
+
+---
+
 *Complete guide for setting up and using the OptimumP2P development environment.*
 
 ## Table of Contents
@@ -7,27 +28,56 @@
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
   - [Generate Bootstrap Identity](#1-generate-bootstrap-identity)
-  - [Start Services](#2-start-services)
-  - [Test Everything](#3-test-everything)
+  - [Configure Environment](#2-configure-environment)
+  - [Start Services](#3-start-services)
+  - [Test Everything](#4-test-everything)
+- [Build and Development Commands](#build-and-development-commands)
+  - [Makefile Commands](#makefile-commands)
+  - [Direct Binary Usage](#direct-binary-usage)
 - [Configuration](#configuration)
   - [Proxy Variables](#proxy-variables)
   - [P2P Node Variables](#p2p-node-variables)
   - [One-Command Setup](#one-command-setup-alternative)
-- [Use Cases](#use-cases)
 - [Two Ways to Connect](#two-ways-to-connect)
+- [Architecture Overview](#architecture-overview)
+  - [Core Components](#core-components)
+  - [Communication Flow](#communication-flow)
+  - [Key Features](#key-features)
+- [Setup and Installation](#setup-and-installation)
+  - [Bootstrap Identity Generation](#1-bootstrap-identity-generation)
+  - [Service Startup](#2-service-startup)
+  - [Verification](#3-verification)
 - [API Reference](#api-reference)
   - [Proxy API](#proxy-api)
   - [Proxy gRPC Streaming](#proxy-grpc-streaming)
+  - [Proxy REST API](#proxy-rest-api)
   - [P2P Node API](#p2p-node-api)
+  - [gRPC API](#grpc-api)
 - [Client Tools](#client-tools)
   - [gRPC Proxy Client](#grpc-proxy-client-implementation)
   - [Using P2P Nodes Directly](#using-p2p-nodes-directly-optional--no-proxy)
   - [Publishing Options](#publishing-options)
   - [Inspecting P2P Nodes](#inspecting-p2p-nodes)
   - [Collecting Trace Data for Experiments](#collecting-trace-data-for-experiments)
-- [Troubleshooting](#troubleshooting)
 - [Advanced Configuration](#advanced-configuration)
+  - [Authentication Setup](#authentication-setup-optional)
+  - [Rate Limiting](#rate-limiting)
+  - [P2P Node Configuration](#p2p-node-configuration)
+  - [Proxy Configuration](#proxy-configuration)
 - [Monitoring and Telemetry](#monitoring-and-telemetry)
+  - [Prometheus Metrics](#prometheus-metrics)
+  - [Trace Collection](#trace-collection)
+- [Troubleshooting](#troubleshooting)
+  - [Common Issues](#common-issues)
+  - [Performance Optimization](#performance-optimization)
+  - [Log Analysis](#log-analysis)
+- [Production Considerations](#production-considerations)
+  - [Security](#security)
+  - [Scalability](#scalability)
+  - [Monitoring](#monitoring)
+- [Developer Tools](#developer-tools)
+  - [CLI Integration](#cli-integration)
+  - [API Clients](#api-clients)
 
 ---
 
@@ -60,23 +110,19 @@ This creates the bootstrap peer identity needed for P2P node discovery.
 
 ### 2. Configure Environment
 
-```sh
-cp .env.example .env
-```
-
-Edit `.env`:
+Create `.env` file with your assigned credentials:
 
 ```sh
-BOOTSTRAP_PEER_ID=12D3KooWA82ANHZwULUtcjCrCm9hgemvGFsrkViG1p9sKkHPUFpw
-CLUSTER_ID=docker-dev-cluster
+BOOTSTRAP_PEER_ID=<your-generated-peer-id>
+CLUSTER_ID=<your-assigned-cluster-id>
 ```
 
-> **Important**: `CLUSTER_ID` must be the same across all nodes in the network.
+> **Note**: Each participant will generate their own unique bootstrap identity and receive their assigned cluster ID. No need to copy from examples - use your specific values.
 
 ### 3. Start Services
 
 ```sh
-docker-compose up --build
+docker-compose -f docker-compose-optimum.yml up --build
 ```
 
 ### 4. Test Everything
@@ -127,7 +173,7 @@ After building with `make build`, you can use the binaries directly:
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
 
 # Publish multiple messages with delay
-./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic --addr=127.0.0.1:33222 -count=5 -sleep=1s
+./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg="Random Message" --addr=127.0.0.1:33222 -count=5 -sleep=1s
 ```
 
 **Example Output:**
@@ -136,11 +182,11 @@ After building with `make build`, you can use the binaries directly:
 Connecting to node at: 127.0.0.1:33221…
 Trying to subscribe to topic testtopic…
 Subscribed to topic "testtopic", waiting for messages…
-[1] Received message: "HelloWorld"
+Recv message: [1] [1757588485854443000 75] [1757588485852133000 50] HelloWorld
 
 # Publish output:
 Connecting to node at: 127.0.0.1:33222…
-Published "HelloWorld" to "testtopic"
+Published "[1757588485852133000 50] HelloWorld" to "testtopic" (took 840.875µs)
 ```
 
 ## Configuration
@@ -184,39 +230,10 @@ curl -sSL https://raw.githubusercontent.com/getoptimum/optimum-dev-setup-guide/m
 
 This downloads and runs the same identity generation script, creating the bootstrap peer identity and setting the environment variable.
 
-## Use Cases
-
-You can use this setup to:
-
-* Test local applications with OptimumP2P
-* Learn publish/subscribe mechanics via REST or WebSocket
-* Simulate client/proxy/node interactions
-* Experiment with clustering, sharding, and thresholds
-
 ## Two Ways to Connect
 
 1. **Via Proxy** (recommended): Connect to proxies for managed access with authentication and rate limiting
 2. **Direct P2P**: Connect directly to P2P nodes for low-level integration
-
-### Connecting to Remote Clusters
-
-OptimumP2P supports connecting to remote P2P clusters for distributed testing and production use:
-
-```bash
-# Connect to remote cluster nodes
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=distributed-topic --addr=remote-node-1:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic --addr=remote-node-2:33212
-
-# Example with testnet cluster
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=testnet-demo --addr=34.124.246.10:33212
-```
-
-**Key Points:**
-- Remote nodes use the standard sidecar port `33212`
-- Ensure you have the correct `CLUSTER_ID` for the target cluster
-- Messages will propagate across the entire distributed mesh network
-
----
 
 ## Architecture Overview
 
@@ -267,10 +284,10 @@ Generate the P2P bootstrap identity for node discovery:
 
 ```sh
 # Start all services in detached mode
-docker-compose up --build -d
+docker-compose -f docker-compose-optimum.yml up --build -d
 
 # Check service status
-docker-compose ps
+docker-compose -f docker-compose-optimum.yml ps
 ```
 
 **Expected Services:**
@@ -660,18 +677,50 @@ Received message: "random1"
 Received message: "random2"
 ```
 
+#### Understanding Message Output Format
+
+When subscribing to topics, you'll see detailed message information in this format:
+
+```sh
+Recv message: [1] [1757579641382484000 126] [1757579641203739000 100] bqhn4Yhab4KorTqcHmViooGF3gPmjSwAZon8kjMUGJY8aRoH/ogmuTZ+IHS/xwa1
+meOKYWvJ37ossi5bbMGAg5TgsB0aP61x/Oi
+```
+
+**Message Format Breakdown:**
+
+1. **`[1]`** - **Message Sequence Number**
+   - Incremental counter of received messages
+   - Shows this is the 1st, 2nd, 3rd... message received
+
+2. **`[1757579641382484000 126]`** - **Receive Timestamp & Size**
+   - `1757579641382484000` = **Unix timestamp in nanoseconds** when message was received
+   - `126` = **Total message size** in bytes (including prefix)
+
+3. **`[1757579641203739000 100]`** - **Original Publish Timestamp & Content Size**
+   - `1757579641203739000` = **Unix timestamp in nanoseconds** when message was originally published
+   - `100` = **Original content size** in bytes (before prefix was added)
+
+4. **`bqhn4Yhab4KorTqcHmViooGF3gPmjSwAZon8kjMUGJY8aRoH/ogmuTZ+IHS/xwa1...`** - **Message Content**
+   - The actual message data (base64 encoded random content in this example)
+   - This is the original message content that was published
+
+**Key Insights:**
+- **Network Latency**: ~18ms (difference between publish and receive timestamps)
+- **Message Integrity**: Content size matches original (100 bytes)
+- **Real-time Delivery**: Messages arrive with precise timing information
+
 ##### Publish to a Topic
 
 **Local Docker Development:**
 ```sh
-./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=localhost:33222
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=localhost:33222
 ```
 
 > **Note:** Here, `localhost:33222` is the mapped port for `p2pnode-2` (33222:33212) in docker-compose.
 
 **External/Remote P2P Nodes:**
 ```sh
-./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=35.197.161.77:33212
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=35.197.161.77:33212
 ```
 
 > **Note:** External nodes use the standard sidecar port `33212` directly.
@@ -679,7 +728,7 @@ Received message: "random2"
 response
 
 ```sh
-Published "random" to "mytopic"
+Published "[1757588485852133000 26] random" to "mytopic" (took 72.042µs)
 ```
 
 * --addr refers to the sidecar gRPC port exposed by the P2P node (e.g., 33221, 33222, etc.)
@@ -697,8 +746,29 @@ The P2P client supports various publishing options for testing:
 ./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic -msg="Hello World" --addr=127.0.0.1:33221
 
 # Publish multiple messages with delay
-./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic --addr=127.0.0.1:33221 -count=10 -sleep=1s
+./grpc_p2p_client/p2p-client -mode=publish -topic=my-topic -msg="Random Message" --addr=127.0.0.1:33221 -count=10 -sleep=1s
 ```
+
+#### Bulk Random Message Publishing
+
+For high-volume testing with random messages:
+
+```sh
+# Publish 50 random messages with 2-second delays
+for i in `seq 1 50`; do 
+  string=$(openssl rand -base64 768 | head -c 100)
+  echo "Publishing message $i: $string"
+  ./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic --addr=34.40.4.192:33212 -msg="$string"
+  sleep 2
+done
+```
+
+**Features:**
+- **Random Content**: Each message contains 100 random characters
+- **High Volume**: Publishes 50 messages in sequence
+- **Real-time Feedback**: Shows message number and content being published
+- **Configurable Delay**: 2-second intervals between messages
+- **Remote Testing**: Uses remote P2P node for distributed testing
 
 #### Available Flags
 
@@ -749,21 +819,19 @@ curl http://localhost:9091/api/v1/version
 response:
 
 ```sh
-{"commit_hash":"6d3d086","version":""}
+{"commit_hash":"rc4","version":""}
 ```
 
 ### Collecting Trace Data for Experiments
 
-The gRPC P2P client includes built-in trace collection functionality to help you monitor and analyze message delivery performance during experiments. This is particularly useful for hackathon participants and developers who want to understand how OptimumP2P handles message routing and delivery.
+The gRPC P2P client includes built-in trace collection functionality that automatically parses and displays trace events from both GossipSub and OptimumP2P protocols. This helps monitor message delivery performance and understand RLNC-enhanced shard behavior.
 
 #### How Trace Collection Works
 
-When you subscribe to a topic using the P2P client, you'll automatically receive trace events that show:
+When you subscribe to a topic, the client automatically receives and parses trace events:
 
-- **GossipSub traces**: Traditional pubsub delivery events
-- **OptimumP2P traces**: RLNC-enhanced shard delivery events
-
-These traces contain valuable metrics like delivery latency, bandwidth usage, and shard redundancy data.
+- **GossipSub traces**: Traditional pubsub delivery events with structured JSON output
+- **OptimumP2P traces**: RLNC-enhanced shard delivery events with detailed shard information
 
 #### Usage Example
 
@@ -772,77 +840,85 @@ These traces contain valuable metrics like delivery latency, bandwidth usage, an
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=your-topic --addr=127.0.0.1:33221
 ```
 
-You'll see trace logs in real-time like:
+You'll see structured trace output like:
 ```
 Subscribed to topic "your-topic", waiting for messages…
-[TRACE] GossipSub trace received: [binary trace data]
-[TRACE] OptimumP2P trace received: [binary trace data]
+[TRACE] OptimumP2P type=JOIN ts=2025-09-11T15:58:04.746971127+05:30 size=66B
+[TRACE] OptimumP2P JSON (136B): {"type":9,"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","timestamp":1757586484746971127,"join":{"topic":"trace-test"}}
+[TRACE] OptimumP2P type=SEND_RPC ts=2025-09-11T15:58:04.73762546+05:30 size=114B
+[TRACE] OptimumP2P JSON (260B): {"type":7,"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","timestamp":1757586484746035127,"sendRPC":{"sendTo":"ACQIARIg46ViPpa30cOyFCgRdiW+TS/qpMkuXQsKK0w+5svzqk8=","meta":{"subscription":[{"subscribe":true,"topic":"trace-test"}]},"length":16}}
+[TRACE] OptimumP2P type=GRAFT ts=2025-09-11T15:58:28.517443638+05:30 size=106B
+[TRACE] OptimumP2P JSON (202B): {"type":11,"peerID":"ACQIARIg46ViPpa30cOyFCgRdiW+TS/qpMkuXQsKK0w+5svzqk8=","timestamp":1757586508517443638,"graft":{"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","topic":"trace-test"}}
 [1] Received message: "Hello World"
 ```
 
-**Note:** The trace data appears as protobuf binary format (marshaled TraceEvent structures) for performance optimization. This contains delivery latency, bandwidth usage, and shard redundancy metrics in an efficient binary format, aligned with the optimum-proxy implementation.
+**Note:** Trace events are primarily available when connecting to local Docker P2P nodes. Initial connection generates JOIN, SEND_RPC, and GRAFT events. During message flow, you'll see rich RLNC shard events (NEW_SHARD, RECV_RPC, UNNECESSARY_SHARD) that show the protocol's coding behavior. Remote nodes may not generate trace events.
 
-#### Understanding Trace Data
+#### OptimumP2P Trace Event Types
 
-**GossipSub Traces**: Show traditional message delivery metrics
-- Contains delivery latency and bandwidth metrics
-- Binary format for performance optimization
+The client recognizes these OptimumP2P trace events (observed in practice):
 
-**OptimumP2P Traces**: Show RLNC-enhanced delivery events  
-- Contains shard redundancy and RLNC performance data
-- Binary format for efficient transmission
+**Common Events:**
+- **JOIN**: Node joins a topic (type=9)
+- **SEND_RPC**: Sends RPC messages to peers (type=7)
+- **GRAFT**: Establishes mesh connections for topic (type=11)
 
-#### Experimental Use Cases
+**Shard Events** (when RLNC is active):
+- **NEW_SHARD**: New RLNC shard created with message ID and coefficients (type=16)
+- **DUPLICATE_SHARD**: Duplicate shard detected (type=13)
+- **UNHELPFUL_SHARD**: Shard that doesn't help decode (type=14)
+- **UNNECESSARY_SHARD**: Shard that's not needed for decoding (type=15)
 
-This trace collection is perfect for:
+**Other Events:**
+- **PUBLISH_MESSAGE**: Message published to topic (type=0)
+- **DELIVER_MESSAGE**: Message delivered to subscriber (type=3)
+- **ADD_PEER/REMOVE_PEER**: Peer connection events (type=4/5)
+- **RECV_RPC**: Receives RPC messages from peers (type=6)
+- **LEAVE**: Node leaves a topic (type=10)
+- **PRUNE**: Removes mesh connections (type=12)
 
-1. **Performance Benchmarking**: Compare delivery latency between GossipSub and OptimumP2P
-2. **Network Analysis**: Understand shard distribution and redundancy levels
-3. **Threshold Optimization**: Analyze how different threshold settings affect delivery
-4. **Bandwidth Studies**: Monitor data usage patterns across different protocols
+#### Implementation Details
 
-#### Reference Implementation
-
-The trace logging is implemented in `grpc_p2p_client/p2p_client.go`:
-
-```go
-case protobuf.ResponseType_MessageTraceGossipSub:
-    fmt.Printf("[TRACE] GossipSub trace received: %s\n", string(resp.GetData()))
-case protobuf.ResponseType_MessageTraceOptimumP2P:
-    fmt.Printf("[TRACE] OptimumP2P trace received: %s\n", string(resp.GetData()))
-```
-
-#### Advanced Trace Data Parsing
-
-For developers who want to parse the trace data attributes, you can define structs to handle the binary data:
+The trace parsing is implemented in `grpc_p2p_client/p2p_client.go`:
 
 ```go
-// Example struct for parsing trace data (when available in JSON format)
-type TraceData struct {
-    Event       string    `json:"event"`
-    Timestamp   time.Time `json:"timestamp"`
-    LatencyMs   int       `json:"latency_ms,omitempty"`
-    BandwidthBytes int    `json:"bandwidth_bytes,omitempty"`
-    ShardID     string    `json:"shard_id,omitempty"`
-    Redundancy  float64   `json:"redundancy,omitempty"`
+func handleGossipSubTrace(data []byte) {
+    evt := &pubsubpb.TraceEvent{}
+    if err := proto.Unmarshal(data, evt); err != nil {
+        fmt.Printf("[TRACE] GossipSub decode error: %v\n", err)
+        return
+    }
+    ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
+    fmt.Printf("[TRACE] GossipSub type=%s ts=%s size=%dB\n", evt.GetType().String(), ts, len(data))
+    jb, _ := json.Marshal(evt)
+    fmt.Printf("[TRACE] GossipSub JSON (%dB): %s\n", len(jb), string(jb))
 }
 
-// Usage example (when trace data is in JSON format)
-case protobuf.ResponseType_MessageTraceOptimumP2P:
-    var traceData TraceData
-    if err := json.Unmarshal(resp.GetData(), &traceData); err != nil {
-        log.Printf("Error parsing trace data: %v", err)
-    } else {
-        fmt.Printf("[TRACE] OptimumP2P %s: latency=%dms, redundancy=%.2f\n", 
-            traceData.Event, traceData.LatencyMs, traceData.Redundancy)
+func handleOptimumP2PTrace(data []byte) {
+    evt := &optsub.TraceEvent{}
+    if err := proto.Unmarshal(data, evt); err != nil {
+        fmt.Printf("[TRACE] OptimumP2P decode error: %v\n", err)
+        return
     }
+    ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
+    typeStr := optsub.TraceEvent_Type_name[int32(evt.GetType())]
+    fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s size=%dB\n", typeStr, ts, len(data))
+    
+    // Display shard-specific details
+    switch evt.GetType() {
+    case optsub.TraceEvent_NEW_SHARD:
+        fmt.Printf("  NEW_SHARD id=%x coeff=%x\n", evt.GetNewShard().GetMessageID(), evt.GetNewShard().GetCoefficients())
+    case optsub.TraceEvent_DUPLICATE_SHARD:
+        fmt.Printf("  DUPLICATE_SHARD id=%x\n", evt.GetDuplicateShard().GetMessageID())
+    // ... other shard types
+    }
+    
+    jb, _ := json.Marshal(evt)
+    fmt.Printf("[TRACE] OptimumP2P JSON (%dB): %s\n", len(jb), string(jb))
+}
 ```
 
-This provides both simple logging and structured parsing options for trace data analysis.
-
-
-
----
+This provides both human-readable summaries and complete JSON data for detailed analysis.
 
 ## Advanced Configuration
 
@@ -851,7 +927,7 @@ This provides both simple logging and structured parsing options for trace data 
 For development, authentication is disabled by default. Enable Auth0 JWT authentication by setting environment variables:
 
 ```yaml
-# docker-compose.yml
+# docker-compose-optimum.yml
 environment:
   ENABLE_AUTH: "false"
 ```
@@ -942,10 +1018,13 @@ The P2P client includes built-in trace collection for performance analysis:
 
 **Output includes:**
 ```text
-[TRACE] GossipSub trace received: [binary data]
-[TRACE] OptimumP2P trace received: [binary data]
-[1] Received message: "Hello World"
+[TRACE] OptimumP2P type=JOIN ts=2025-09-11T15:58:04.746971127+05:30 size=66B
+[TRACE] OptimumP2P type=SEND_RPC ts=2025-09-11T15:58:04.73762546+05:30 size=114B
+[TRACE] OptimumP2P type=GRAFT ts=2025-09-11T15:58:28.517443638+05:30 size=106B
+Recv message: [1] [1757579641382484000 126] [1757579641203739000 100] Hello World
 ```
+
+**Note:** Trace events appear during initial connection setup (JOIN, SEND_RPC, GRAFT) and continue during message flow with rich RLNC shard events (NEW_SHARD, RECV_RPC, UNNECESSARY_SHARD).
 
 ---
 
@@ -955,7 +1034,7 @@ The P2P client includes built-in trace collection for performance analysis:
 
 #### Services Not Starting
 
-**Problem:** `docker-compose up` fails with identity errors
+**Problem:** `docker-compose -f docker-compose-optimum.yml up` fails with identity errors
 
 **Solution:**
 ```sh
@@ -965,7 +1044,7 @@ rm -rf identity/
 
 # Set environment variable
 export BOOTSTRAP_PEER_ID=<generated-peer-id>
-docker-compose up --build -d
+docker-compose -f docker-compose-optimum.yml up --build -d
 ```
 
 #### API Endpoints Not Responding
@@ -975,9 +1054,9 @@ docker-compose up --build -d
 **Solution:**
 ```sh
 # Check if services are using latest images
-docker-compose down
+docker-compose -f docker-compose-optimum.yml down
 docker system prune -f
-docker-compose up --build -d
+docker-compose -f docker-compose-optimum.yml up --build -d
 ```
 
 #### P2P Nodes Not Connecting
@@ -1030,7 +1109,7 @@ docker logs optimum-dev-setup-guide-proxy-1-1
 docker logs optimum-dev-setup-guide-p2pnode-1-1
 
 # All services
-docker-compose logs -f
+docker-compose -f docker-compose-optimum.yml logs -f
 ```
 
 ---
