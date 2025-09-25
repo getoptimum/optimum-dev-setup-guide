@@ -15,6 +15,7 @@ For connecting to external P2P nodes or remote clusters, use the standard sideca
 ```
 
 **Port Usage Summary:**
+
 - **Local Docker**: Use `127.0.0.1:33221-33224` (Docker port forwarding)
 - **External/Remote**: Use `node-ip:33212` (standard sidecar port)
 
@@ -30,11 +31,11 @@ It demonstrates how partners can configure proxies and P2P nodes, and serves as 
 
 ### How it works
 
-* Clients (like CLI, dApps, or backend services) interact with Proxies using REST/WebSocket.
-* Proxies handle user subscriptions, publish requests, and stream delivery.
-* Proxies connect to multiple P2P nodes via gRPC sidecar connections.
-* P2P nodes form an RLNC-enhanced mesh network, forwarding messages via coded shards.
-* Messages propagate based on configurable thresholds and shard redundancy.
+- Clients (like CLI, dApps, or backend services) interact with Proxies using REST/WebSocket.
+- Proxies handle user subscriptions, publish requests, and stream delivery.
+- Proxies connect to multiple P2P nodes via gRPC sidecar connections.
+- P2P nodes form an RLNC-enhanced mesh network, forwarding messages via coded shards.
+- Messages propagate based on configurable thresholds and shard redundancy.
 
 > **Note:** OptP2P refers to the main set of P2P nodes forming the core mesh network. The Proxy acts as a proxy, providing controlled and secure access to all P2P nodes for external clients and integrations (e.g., Matrix, collaboration tools, etc.). For native integrations or advanced use cases, you can interact directly with the P2P mesh, bypassing the Proxy for full flexibility and performance.
 
@@ -44,19 +45,19 @@ It demonstrates how partners can configure proxies and P2P nodes, and serves as 
 
 This setup is not production-ready but is designed to:
 
-* Show how to run multiple P2P nodes and proxies
-* Demonstrate typical configuration options
-* Help partners bootstrap their own network using OptimumP2P
+- Show how to run multiple P2P nodes and proxies
+- Demonstrate typical configuration options
+- Help partners bootstrap their own network using OptimumP2P
 
 **You are expected to modify this template based on your environment, infrastructure, and security needs.**
 
 ## What It Includes
 
-* 4 P2P Nodes running the OptimumP2P
-* 2 Proxies for client-facing APIs (HTTP/WebSocket)
-* Static IP overlay (optimum-network) for deterministic internal addressing
-* .env-based dynamic peer identity setup
-* Optional Auth0 support (disabled by default)
+- 4 P2P Nodes running the OptimumP2P
+- 2 Proxies for client-facing APIs (HTTP/WebSocket)
+- Static IP overlay (optimum-network) for deterministic internal addressing
+- .env-based dynamic peer identity setup
+- Optional Auth0 support (disabled by default)
 
 ## Example: Basic Usage
 
@@ -95,7 +96,8 @@ make publish 127.0.0.1:33221 testtopic random 10 1s
 ```
 
 **Example Output:**
-```
+
+```sh
 # Subscribe output:
 Connecting to node at: 127.0.0.1:33221…
 Trying to subscribe to topic testtopic…
@@ -144,6 +146,7 @@ optimum-dev-setup-guide/
 For detailed setup instructions, configuration options, API reference, and troubleshooting, see:
 
 **[Complete Setup Guide](./docs/guide.md)** - Comprehensive documentation covering:
+
 - Prerequisites and detailed setup
 - Configuration options for proxies and P2P nodes
 - API reference (REST, gRPC, WebSocket)
@@ -192,7 +195,8 @@ make help
 ```
 
 **Output:**
-```
+
+```sh
 build                          Build all client binaries
 clean                          Clean build artifacts
 generate-identity              Generate P2P identity (if missing)
@@ -226,7 +230,8 @@ make publish 127.0.0.1:33221 testtopic random 10 1s
 ```
 
 **Example Output:**
-```
+
+```sh
 # Subscribe receives messages in real-time:
 Connecting to node at: 127.0.0.1:33221…
 Subscribed to topic "testtopic", waiting for messages…
@@ -259,6 +264,7 @@ make build
 #### Command Options
 
 The P2P client supports these flags:
+
 - `-mode`: Operation mode (`subscribe` or `publish`)
 - `-topic`: Topic name to subscribe/publish to
 - `-addr`: P2P node gRPC address (default: `localhost:33212`)
@@ -270,12 +276,11 @@ The P2P client supports these flags:
 
 **Local Docker Development:**
 The development setup exposes these P2P node ports:
+
 - `127.0.0.1:33221` → p2pnode-1 (sidecar port 33212)
 - `127.0.0.1:33222` → p2pnode-2 (sidecar port 33212)
 - `127.0.0.1:33223` → p2pnode-3 (sidecar port 33212)
 - `127.0.0.1:33224` → p2pnode-4 (sidecar port 33212)
-
-
 
 ## Developer Tools
 
@@ -294,6 +299,7 @@ Run the comprehensive test suite to validate API endpoints and edge cases:
 ```
 
 **What it tests:**
+
 - Proxy API endpoints (subscribe, publish, health, state, version)
 - Input validation (empty fields, invalid JSON)
 - Rapid request handling (5x publish test)
