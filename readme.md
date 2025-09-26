@@ -135,6 +135,7 @@ optimum-dev-setup-guide/
 ├── Makefile               # Build shortcuts and usage examples
 ├── docker-compose-optimum.yml   # OptimumP2P service orchestration
 ├── docker-compose-gossipsub.yml # GossipSub service orchestration
+├── .env.example           # Environment variables template
 ├── test_suite.sh          # API validation tests
 └── README.md              # This file
 ```
@@ -160,10 +161,11 @@ For detailed setup instructions, configuration options, API reference, and troub
 
 ```sh
 # 1. Generate bootstrap identity
-./script/generate-identity.sh
+make generate-identity
 
-# 2. Configure environment (create .env file)
-# Create .env with your generated bootstrap peer ID and assigned cluster ID
+# 2. Configure environment
+cp .env.example .env
+# Replace BOOTSTRAP_PEER_ID in .env with your generated peer ID
 
 # 3. Start all services (OptimumP2P)
 docker-compose -f docker-compose-optimum.yml up --build -d
@@ -174,11 +176,10 @@ docker-compose -f docker-compose-optimum.yml up --build -d
 
 ### Environment Configuration
 
-Create `.env` file with your assigned credentials:
+Copy the example environment file:
 
 ```sh
-BOOTSTRAP_PEER_ID=<your-generated-peer-id>
-CLUSTER_ID=<your-assigned-cluster-id>
+cp .env.example .env
 ```
 
 > **Note**: Each participant will generate their own unique bootstrap identity and receive their assigned cluster ID for their specific testing environment.
@@ -297,7 +298,6 @@ Run the comprehensive test suite to validate API endpoints and edge cases:
 ```sh
 ./test_suite.sh
 ```
-
 **What it tests:**
 
 - Proxy API endpoints (subscribe, publish, health, state, version)
@@ -305,3 +305,4 @@ Run the comprehensive test suite to validate API endpoints and edge cases:
 - Rapid request handling (5x publish test)
 - WebSocket connection (if wscat is installed)
 - Edge cases and error handling
+
