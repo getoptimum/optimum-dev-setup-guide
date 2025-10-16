@@ -129,6 +129,11 @@ optimum-dev-setup-guide/
 │   └── proxy_client.go    # Main proxy client
 ├── keygen/                # Key generation utilities
 │   └── generate_p2p_key.go
+├── metrics/               # Monitoring and observability
+│   └── grafana/           # Grafana dashboards and config
+│       ├── dashboards/    # Pre-built dashboards
+│       ├── prometheus/    # Prometheus configuration
+│       └── provisioning/  # Grafana provisioning
 ├── script/                # Utility scripts
 │   ├── generate-identity.sh # Bootstrap identity generation
 │   └── proxy_client.sh     # Proxy client wrapper
