@@ -42,6 +42,7 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
   - [Bootstrap Identity Generation](#1-bootstrap-identity-generation)
   - [Service Startup](#2-service-startup)
   - [Verification](#3-verification)
+- [Monitoring](#monitoring)
 - [API Reference](#api-reference)
   - [Proxy API](#proxy-api)
   - [Proxy gRPC Streaming](#proxy-grpc-streaming)
@@ -208,8 +209,8 @@ The `.env.example` file contains:
 ```bash
 BOOTSTRAP_PEER_ID=12D3KooWD5RtEPmMR9Yb2ku5VuxqK7Yj1Y5Gv8DmffJ6Ei8maU44
 CLUSTER_ID=docker-dev-cluster
-PROXY_VERSION=v0.0.1-rc6
-P2P_NODE_VERSION=v0.0.1-rc6
+PROXY_VERSION=v0.0.1-rc8
+P2P_NODE_VERSION=v0.0.1-rc8
 ```
 
 **Variables explained:**
@@ -299,6 +300,24 @@ Run the comprehensive test suite:
 ```sh
 ./test_suite.sh
 ```
+---
+
+## Monitoring
+
+The setup includes Grafana dashboards for visualizing P2P node and proxy metrics.
+
+**Access Grafana:**
+- URL: `http://localhost:3000`
+- Credentials: `admin` / `admin`
+
+**Available Dashboards:**
+- **Optimum Proxy Dashboard**: Proxy uptime, cluster health, CPU/memory usage, goroutines
+- **OptimumP2P Nodes Dashboard**: P2P node system state, CPU usage, RAM utilization
+
+**Prometheus:**
+- URL: `http://localhost:9090`
+- Scrapes metrics from all P2P nodes (port 9090) and proxies (port 8080)
+
 ---
 
 ## Troubleshooting
