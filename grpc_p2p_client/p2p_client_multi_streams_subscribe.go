@@ -46,10 +46,10 @@ const (
 )
 
 var (
-	topic  = flag.String("topic", "", "topic name")
-	ipfile = flag.String("ipfile", "", "file with a list of IP addresses")
-	startIdx = flag.Int("start-index", 0, "default 0" )
-	endIdx = flag.Int("end-index", 10000, "default 0" )
+	topic    = flag.String("topic", "", "topic name")
+	ipfile   = flag.String("ipfile", "", "file with a list of IP addresses")
+	startIdx = flag.Int("start-index", 0, "default 0")
+	endIdx   = flag.Int("end-index", 10000, "default 0")
 )
 
 func main() {
@@ -63,11 +63,10 @@ func main() {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
-        fmt.Printf("numip %d  index %d\n",len(_ips), *endIdx)
-        *endIdx = min(len(_ips), *endIdx)
+	fmt.Printf("numip %d  index %d\n", len(_ips), *endIdx)
+	*endIdx = min(len(_ips), *endIdx)
 	ips := _ips[*startIdx:*endIdx]
 	fmt.Printf("Found %d IPs: %v\n", len(ips), ips)
-
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -216,7 +215,7 @@ func handleResponse(ip string, resp *protobuf.Response, counter *int32) {
 		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
 		fmt.Printf("Recv message: [%s] [%d] [%d %d] %s\n\n", ip, n, currentTime, messageSize, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
-		var p2pMessage P2PMessage
+		handleOptimumP2PTrace(resp.GetData())
 	default:
 		log.Println("Unknown response command:", resp.GetCommand())
 	}
@@ -252,24 +251,54 @@ func handleOptimumP2PTrace(data []byte) {
 	}
 
 	// human-readable timestamp
-	ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
+	//ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
 
 	// print type
 	typeStr := optsub.TraceEvent_Type_name[int32(evt.GetType())]
-	fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s size=%dB\n", typeStr, ts, len(data))
+	//fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s size=%dB\n", typeStr, ts, len(data))
+	//fmt.Printf("[TRACE] OptimumP2P type=%s msg_id=%x time=%d, recvr_id=%s, size=%dB\n",
+	//		typeStr, evt.GetDuplicateShard().GetMessageID(), time.Unix(0, evt.GetTimestamp()), evt.GetPeerID(), len(data))
 
 	// if shard-related
-	switch evt.GetType() {
-	case optsub.TraceEvent_NEW_SHARD:
-		fmt.Printf("  NEW_SHARD id=%x coeff=%x\n", evt.GetNewShard().GetMessageID(), evt.GetNewShard().GetCoefficients())
-	case optsub.TraceEvent_DUPLICATE_SHARD:
-		fmt.Printf("  DUPLICATE_SHARD id=%x\n", evt.GetDuplicateShard().GetMessageID())
-	case optsub.TraceEvent_UNHELPFUL_SHARD:
-		fmt.Printf("  UNHELPFUL_SHARD id=%x\n", evt.GetUnhelpfulShard().GetMessageID())
-	case optsub.TraceEvent_UNNECESSARY_SHARD:
-		fmt.Printf("  UNNECESSARY_SHARD id=%x\n", evt.GetUnnecessaryShard().GetMessageID())
-	}
+	/*
+		switch evt.GetType() {
+		case optsub.TraceEvent_NEW_SHARD:
+			fmt.Printf("  NEW_SHARD id=%x coeff=%x\n", evt.GetNewShard().GetMessageID(), evt.GetNewShard().GetCoefficients())
+		case optsub.TraceEvent_DUPLICATE_SHARD:
+			fmt.Printf("  DUPLICATE_SHARD id=%x\n", evt.GetDuplicateShard().GetMessageID())
+		case optsub.TraceEvent_UNHELPFUL_SHARD:
+			fmt.Printf("  UNHELPFUL_SHARD id=%x\n", evt.GetUnhelpfulShard().GetMessageID())
+		case optsub.TraceEvent_UNNECESSARY_SHARD:
+			fmt.Printf("  UNNECESSARY_SHARD id=%x\n", evt.GetUnnecessaryShard().GetMessageID())
+		}
+	*/
+
+	// if shard-related
+	/*
+		switch evt.GetType() {
+		case optsub.TraceEvent_NEW_SHARD:
+			fmt.Printf("  NEW_SHARD id=%x coeff=%x\n", evt.GetNewShard().GetMessageID(), evt.GetNewShard().GetCoefficients())
+		case optsub.TraceEvent_DUPLICATE_SHARD:
+			fmt.Printf("  DUPLICATE_SHARD id=%x\n", evt.GetDuplicateShard().GetMessageID())
+		case optsub.TraceEvent_UNHELPFUL_SHARD:
+			fmt.Printf("  UNHELPFUL_SHARD id=%x\n", evt.GetUnhelpfulShard().GetMessageID())
+		case optsub.TraceEvent_UNNECESSARY_SHARD:
+			fmt.Printf("  UNNECESSARY_SHARD id=%x\n", evt.GetUnnecessaryShard().GetMessageID())
+		}
+	*/
 
 	jb, _ := json.Marshal(evt)
-	fmt.Printf("[TRACE] OptimumP2P JSON (%dB): %s\n", len(jb), string(jb))
+	fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
+
+	/*
+		     message_type  <- systems information
+		     message_id   <- application layer
+			 time_stamp  <- event occuring the event  publish, new shard, duplicate shard
+			 receiver_id
+			 sender_id
+
+
+
+	*/
+
 }
