@@ -215,6 +215,8 @@ func handleResponse(ip string, resp *protobuf.Response, counter *int32) {
 
 		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
 		fmt.Printf("Recv message: [%s] [%d] [%d %d] %s\n\n", ip, n, currentTime, messageSize, string(p2pMessage.Message))
+	case protobuf.ResponseType_MessageTraceOptimumP2P:
+		var p2pMessage P2PMessage
 	default:
 		log.Println("Unknown response command:", resp.GetCommand())
 	}
