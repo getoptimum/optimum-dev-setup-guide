@@ -47,9 +47,11 @@ var (
 	// optional: number of messages to publish (for stress testing or batch sending)
 	count = flag.Int("count", 1, "number of messages to publish")
 	// optional: sleep duration between publishes
-	sleep  = flag.Duration("sleep", 0, "optional delay between publishes (e.g., 1s, 500ms)")
-	ipfile = flag.String("ipfile", "", "file with a list of IP addresses")
-	numips = flag.Int("num-ip-use", 0, "default 0, -1 use all")
+	sleep  = flag.Duration("sleep", 50*time.Millisecond, "optional delay between publishes (e.g., 1s, 500ms)")
+        ipfile   = flag.String("ipfile", "", "file with a list of IP addresses")
+        startIdx = flag.Int("start-index", 0, "beginning index is 0: default 0")
+        endIdx   = flag.Int("end-index", 10000, "index-1")
+
 )
 
 func main() {
@@ -58,16 +60,15 @@ func main() {
 		log.Fatalf("−topic is required")
 	}
 
-	ips, err := readIPsFromFile(*ipfile)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-	fmt.Printf("Found %d IPs: %v\n", len(ips), ips)
-
-        if *numips >= 0 {
-           ips = ips[:min(len(ips), *numips)]
+        _ips, err := readIPsFromFile(*ipfile)
+        if err != nil {
+                fmt.Printf("Error: %v\n", err)
+                return
         }
+        fmt.Printf("numip %d  index %d\n", len(_ips), *endIdx)
+        *endIdx = min(len(_ips), *endIdx)
+        ips := _ips[*startIdx:*endIdx]
+        fmt.Printf("Found %d IPs: %v\n", len(ips), ips)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

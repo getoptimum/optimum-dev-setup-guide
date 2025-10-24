@@ -48,8 +48,8 @@ const (
 var (
 	topic    = flag.String("topic", "", "topic name")
 	ipfile   = flag.String("ipfile", "", "file with a list of IP addresses")
-	startIdx = flag.Int("start-index", 0, "default 0")
-	endIdx   = flag.Int("end-index", 10000, "default 0")
+        startIdx = flag.Int("start-index", 0, "beginning index is 0: default 0")
+        endIdx   = flag.Int("end-index", 10000, "index-1")
 )
 
 func main() {
