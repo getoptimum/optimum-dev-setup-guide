@@ -19,9 +19,9 @@ import (
 	"syscall"
 	"time"
 
-	protobuf "p2p_client/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	protobuf "p2p_client/grpc"
 )
 
 // P2PMessage represents a message structure used in P2P communication
@@ -43,18 +43,17 @@ const (
 )
 
 var (
-	topic   = flag.String("topic", "", "topic name")
+	topic = flag.String("topic", "", "topic name")
 
 	// optional: number of messages to publish (for stress testing or batch sending)
-	count = flag.Int("count", 1, "number of messages to publish")
+	count    = flag.Int("count", 1, "number of messages to publish")
 	dataSize = flag.Int("datasize", 100, "size of random of messages to publish")
 	// optional: sleep duration between publishes
-	sleep  = flag.Duration("sleep", 50*time.Millisecond, "optional delay between publishes (e.g., 1s, 500ms)")
-        ipfile   = flag.String("ipfile", "", "file with a list of IP addresses")
-        startIdx = flag.Int("start-index", 0, "beginning index is 0: default 0")
-        endIdx   = flag.Int("end-index", 10000, "index-1")
-        output   = flag.String("output", "", "file to write the outgoing data hashes")
-
+	sleep    = flag.Duration("sleep", 50*time.Millisecond, "optional delay between publishes (e.g., 1s, 500ms)")
+	ipfile   = flag.String("ipfile", "", "file with a list of IP addresses")
+	startIdx = flag.Int("start-index", 0, "beginning index is 0: default 0")
+	endIdx   = flag.Int("end-index", 10000, "index-1")
+	output   = flag.String("output", "", "file to write the outgoing data hashes")
 )
 
 func main() {
@@ -63,15 +62,15 @@ func main() {
 		log.Fatalf("−topic is required")
 	}
 
-        _ips, err := readIPsFromFile(*ipfile)
-        if err != nil {
-                fmt.Printf("Error: %v\n", err)
-                return
-        }
-        fmt.Printf("numip %d  index %d\n", len(_ips), *endIdx)
-        *endIdx = min(len(_ips), *endIdx)
-        ips := _ips[*startIdx:*endIdx]
-        fmt.Printf("Found %d IPs: %v\n", len(ips), ips)
+	_ips, err := readIPsFromFile(*ipfile)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	fmt.Printf("numip %d  index %d\n", len(_ips), *endIdx)
+	*endIdx = min(len(_ips), *endIdx)
+	ips := _ips[*startIdx:*endIdx]
+	fmt.Printf("Found %d IPs: %v\n", len(ips), ips)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -83,18 +82,18 @@ func main() {
 		cancel()
 	}()
 
-        // Buffered channel to prevent blocking
-        dataCh := make(chan string, 100) 
-        done := make(chan bool)
-    
+	// Buffered channel to prevent blocking
+	dataCh := make(chan string, 100)
+	done := make(chan bool)
+
 	var wg sync.WaitGroup
-        // Start writing the has of the published data
+	// Start writing the has of the published data
 	if *output != "" {
-            wg.Add(1)
-            go func() {
-               defer wg.Done()
-               go writeHashToFile(dataCh, done, *output)
-            }()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			go writeHashToFile(dataCh, done, *output)
+		}()
 	}
 
 	// Launch goroutines with synchronization
@@ -103,23 +102,23 @@ func main() {
 		go func(ip string) {
 			defer wg.Done()
 			datasize := *dataSize
-			sendMessages(ctx, ip, datasize, *output!="", dataCh)
+			sendMessages(ctx, ip, datasize, *output != "", dataCh)
 		}(ip)
 	}
 	wg.Wait()
-        close(dataCh)
-        <-done   
+	close(dataCh)
+	<-done
 
 }
 
-func sendMessages(ctx context.Context, ip string, datasize int, write bool,  dataCh chan<- string ) error {
+func sendMessages(ctx context.Context, ip string, datasize int, write bool, dataCh chan<- string) error {
 	// connect with simple gRPC settings
-        select {
-        case <-ctx.Done():
-           log.Printf("[%s] context canceled, stopping", ip)
-           return ctx.Err()
-        default:
-        }
+	select {
+	case <-ctx.Done():
+		log.Printf("[%s] context canceled, stopping", ip)
+		return ctx.Err()
+	default:
+	}
 
 	conn, err := grpc.NewClient(ip,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -158,20 +157,20 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool,  dat
 			Topic:   *topic,
 			Data:    data,
 		}
-         
+
 		if err := stream.Send(pubReq); err != nil {
 			log.Fatalf("send publish: %v", err)
 		}
 
 		elapsed := time.Since(start)
 
-                hash := sha256.Sum256(data)
-                hexHashString := hex.EncodeToString(hash[:])
-                var dataToSend string
-                if write == true {
-                    dataToSend = fmt.Sprintf("%s\t%d\t%s", ip, len(data),  hexHashString)
-                    dataCh <- dataToSend
-                }
+		hash := sha256.Sum256(data)
+		hexHashString := hex.EncodeToString(hash[:])
+		var dataToSend string
+		if write == true {
+			dataToSend = fmt.Sprintf("%s\t%d\t%s", ip, len(data), hexHashString)
+			dataCh <- dataToSend
+		}
 		fmt.Printf("Published %s to %q (took %v)\n", dataToSend, *topic, elapsed)
 
 		if *sleep > 0 {
@@ -236,28 +235,24 @@ func headHex(b []byte, n int) string {
 	return hex.EncodeToString(b)
 }
 
-
 func writeHashToFile(dataCh <-chan string, done chan<- bool, filename string) {
-    file, err := os.Create(filename)
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer file.Close()
-    
-    writer := bufio.NewWriter(file)
-    defer writer.Flush()
-    
-    // Process until channel is closed
-    for data := range dataCh {
-        _, err := writer.WriteString(data + "\n")
-        if err != nil {
-            log.Printf("Write error: %v", err)
-        }
-    }
-    done <- true
-    fmt.Println("All data flushed to disk")
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	// Process until channel is closed
+	for data := range dataCh {
+		_, err := writer.WriteString(data + "\n")
+		if err != nil {
+			log.Printf("Write error: %v", err)
+		}
+	}
+	done <- true
+	fmt.Println("All data flushed to disk")
 
 }
-
-
-
