@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -46,11 +47,13 @@ var (
 
 	// optional: number of messages to publish (for stress testing or batch sending)
 	count = flag.Int("count", 1, "number of messages to publish")
+	dataSize = flag.Int("datasize", 100, "size of random of messages to publish")
 	// optional: sleep duration between publishes
 	sleep  = flag.Duration("sleep", 50*time.Millisecond, "optional delay between publishes (e.g., 1s, 500ms)")
         ipfile   = flag.String("ipfile", "", "file with a list of IP addresses")
         startIdx = flag.Int("start-index", 0, "beginning index is 0: default 0")
         endIdx   = flag.Int("end-index", 10000, "index-1")
+        output   = flag.String("output", "", "file to write the outgoing data hashes")
 
 )
 
@@ -80,23 +83,36 @@ func main() {
 		cancel()
 	}()
 
+        // Buffered channel to prevent blocking
+        dataCh := make(chan string, 100) 
+        done := make(chan bool)
+    
+	var wg sync.WaitGroup
+        // Start writing the has of the published data
+	if *output != "" {
+            wg.Add(1)
+            go func() {
+               defer wg.Done()
+               go writeHashToFile(dataCh, done, *output)
+            }()
+	}
 
 	// Launch goroutines with synchronization
-	var wg sync.WaitGroup
 	for _, ip := range ips {
 		wg.Add(1)
 		go func(ip string) {
 			defer wg.Done()
-			data := ip
-			sendMessages(ctx, ip, data)
+			datasize := *dataSize
+			sendMessages(ctx, ip, datasize, *output!="", dataCh)
 		}(ip)
 	}
-
 	wg.Wait()
+        close(dataCh)
+        <-done   
 
 }
 
-func sendMessages(ctx context.Context, ip string, message string) error {
+func sendMessages(ctx context.Context, ip string, datasize int, write bool,  dataCh chan<- string ) error {
 	// connect with simple gRPC settings
         select {
         case <-ctx.Done():
@@ -105,15 +121,6 @@ func sendMessages(ctx context.Context, ip string, message string) error {
         default:
         }
 
-/*
-conn, err := grpc.Dial(ip,
-    grpc.WithTransportCredentials(insecure.NewCredentials()),
-    grpc.WithDefaultCallOptions(
-        grpc.MaxCallRecvMsgSize(math.MaxInt),
-        grpc.MaxCallSendMsgSize(math.MaxInt),
-    ),
-)
-*/
 	conn, err := grpc.NewClient(ip,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(
@@ -139,24 +146,33 @@ conn, err := grpc.Dial(ip,
 		start := time.Now()
 		var data []byte
 		//currentTime := time.Now().UnixNano()
-		randomBytes := make([]byte, 10)
+		randomBytes := make([]byte, datasize)
 		if _, err := rand.Read(randomBytes); err != nil {
 			log.Fatalf("failed to generate random bytes: %v", err)
 		}
 
 		randomSuffix := hex.EncodeToString(randomBytes)
-		data = []byte(fmt.Sprintf("%s-%s", message, randomSuffix))
+		data = []byte(fmt.Sprintf("%s-%s", ip, randomSuffix))
 		pubReq := &protobuf.Request{
 			Command: int32(CommandPublishData),
 			Topic:   *topic,
 			Data:    data,
 		}
+         
 		if err := stream.Send(pubReq); err != nil {
 			log.Fatalf("send publish: %v", err)
 		}
 
 		elapsed := time.Since(start)
-		fmt.Printf("Published %q to %q (took %v)\n", string(data), *topic, elapsed)
+
+                hash := sha256.Sum256(data)
+                hexHashString := hex.EncodeToString(hash[:])
+                var dataToSend string
+                if write == true {
+                    dataToSend = fmt.Sprintf("%s\t%d\t%s", ip, len(data),  hexHashString)
+                    dataCh <- dataToSend
+                }
+		fmt.Printf("Published %s to %q (took %v)\n", dataToSend, *topic, elapsed)
 
 		if *sleep > 0 {
 			time.Sleep(*sleep)
@@ -219,3 +235,29 @@ func headHex(b []byte, n int) string {
 	}
 	return hex.EncodeToString(b)
 }
+
+
+func writeHashToFile(dataCh <-chan string, done chan<- bool, filename string) {
+    file, err := os.Create(filename)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+    
+    writer := bufio.NewWriter(file)
+    defer writer.Flush()
+    
+    // Process until channel is closed
+    for data := range dataCh {
+        _, err := writer.WriteString(data + "\n")
+        if err != nil {
+            log.Printf("Write error: %v", err)
+        }
+    }
+    done <- true
+    fmt.Println("All data flushed to disk")
+
+}
+
+
+

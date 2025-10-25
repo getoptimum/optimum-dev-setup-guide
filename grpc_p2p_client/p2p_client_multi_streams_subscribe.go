@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+        "crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -50,6 +51,7 @@ var (
 	ipfile   = flag.String("ipfile", "", "file with a list of IP addresses")
         startIdx = flag.Int("start-index", 0, "beginning index is 0: default 0")
         endIdx   = flag.Int("end-index", 10000, "index-1")
+        output   = flag.String("output", "", "file to write the outgoing data hashes")
 )
 
 func main() {
@@ -78,21 +80,37 @@ func main() {
 		cancel()
 	}()
 
+
+        // Buffered channel to prevent blocking
+        dataCh := make(chan string, 100) 
+        done := make(chan bool)
+
 	// Launch goroutines with synchronization
 	var wg sync.WaitGroup
+        // Start writing the has of the published data
+	if *output != "" {
+            wg.Add(1)
+            go func() {
+               defer wg.Done()
+               go writeHashToFile(ctx, dataCh, done, *output)
+            }()
+	}
+
+
 	for _, ip := range ips {
 		wg.Add(1)
 		go func(ip string) {
 			defer wg.Done()
-			data := ip
-			receiveMessages(ctx, ip, data)
+			receiveMessages(ctx, ip, *output!="", dataCh)
 		}(ip)
 	}
 
 	wg.Wait()
+        close(dataCh)
+        <- done
 }
 
-func receiveMessages(ctx context.Context, ip string, message string) error {
+func receiveMessages(ctx context.Context, ip string, write bool,  dataCh chan<- string) error {
 	// connect with simple gRPC settings
 	//fmt.Println("Starting ", ip)
 	select {
@@ -165,7 +183,7 @@ func receiveMessages(ctx context.Context, ip string, message string) error {
 				return nil
 			}
 			go func(resp *protobuf.Response) {
-				handleResponse(ip, resp, &receivedCount)
+				handleResponse(ip, resp, &receivedCount, write, dataCh)
 			}(resp)
 		}
 	}
@@ -199,7 +217,7 @@ func readIPsFromFile(filename string) ([]string, error) {
 	return ips, nil
 }
 
-func handleResponse(ip string, resp *protobuf.Response, counter *int32) {
+func handleResponse(ip string, resp *protobuf.Response, counter *int32, write bool, dataCh chan<- string) {
 	switch resp.GetCommand() {
 	case protobuf.ResponseType_Message:
 		var p2pMessage P2PMessage
@@ -207,13 +225,23 @@ func handleResponse(ip string, resp *protobuf.Response, counter *int32) {
 			log.Printf("Error unmarshalling message: %v", err)
 			return
 		}
-		n := atomic.AddInt32(counter, 1)
+		_ = atomic.AddInt32(counter, 1)
 
-		currentTime := time.Now().UnixNano()
-		messageSize := len(p2pMessage.Message)
 
-		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
-		fmt.Printf("Recv message: [%s] [%d] [%d %d] %s\n\n", ip, n, currentTime, messageSize, string(p2pMessage.Message))
+                hash := sha256.Sum256(p2pMessage.Message)
+                hexHashString := hex.EncodeToString(hash[:])
+
+                parts := strings.Split(string(p2pMessage.Message), "-")
+                if len(parts) > 0 {
+                  publisher := parts[0]
+                  var dataToSend string
+                  if write == true {
+                     dataToSend = fmt.Sprintf("%s\t%s\t%d\t%s",publisher,  ip, len(p2pMessage.Message),  hexHashString)
+                     dataCh <- dataToSend
+                  }
+                }
+                
+		//fmt.Printf("Recv message: %s %d %s\n", ip,  messageSize, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceOptimumP2P:
 		handleOptimumP2PTrace(resp.GetData())
 	default:
@@ -297,8 +325,36 @@ func handleOptimumP2PTrace(data []byte) {
 			 receiver_id
 			 sender_id
 
-
-
 	*/
 
 }
+
+func writeHashToFile(ctx context.Context, dataCh <-chan string, done chan<- bool, filename string) {
+    file, err := os.Create(filename)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+    
+    writer := bufio.NewWriter(file)
+    defer writer.Flush()
+    
+    // Process until channel is closed
+    for data := range dataCh {
+        select {
+           case <-ctx.Done():
+               return 
+           default:
+
+        }
+        _, err := writer.WriteString(data + "\n")
+        if err != nil {
+            log.Printf("Write error: %v", err)
+        }
+    }
+    done <- true
+    fmt.Println("All data flushed to disk")
+}
+
+
+
