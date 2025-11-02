@@ -92,7 +92,8 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			go writeHashToFile(dataCh, done, *output)
+                        header := fmt.Sprintf("sender\tsize\tsha256(msg)") 
+			go writeHashToFile(dataCh, done, *output, header)
 		}()
 	}
 
@@ -235,7 +236,7 @@ func headHex(b []byte, n int) string {
 	return hex.EncodeToString(b)
 }
 
-func writeHashToFile(dataCh <-chan string, done chan<- bool, filename string) {
+func writeHashToFile(dataCh <-chan string, done chan<- bool, filename string, header string) {
 	file, err := os.Create(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -244,6 +245,14 @@ func writeHashToFile(dataCh <-chan string, done chan<- bool, filename string) {
 
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
+
+        // write the header
+        if header != "" {
+	   _, err := writer.WriteString(header + "\n")
+	   if err != nil {
+		log.Printf("Write error: %v", err)
+	   }
+        }
 
 	// Process until channel is closed
 	for data := range dataCh {

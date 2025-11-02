@@ -93,7 +93,8 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			go writeToFile(ctx, dataCh, dataDone, *outputData)
+                        header := fmt.Sprintf("receiver\tsender\tsize\tsha256(msg)") 
+			go writeToFile(ctx, dataCh, dataDone, *outputData, header)
 		}()
 	}
 
@@ -101,7 +102,8 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			go writeToFile(ctx, traceCh, traceDone, *outputTrace)
+                        header := "" //fmt.Sprintf("sender\tsize\tsha256(msg)") 
+			go writeToFile(ctx, traceCh, traceDone, *outputTrace, header)
 		}()
 	}
 
@@ -358,20 +360,74 @@ func handleOptimumP2PTrace(data []byte, writetrace bool, traceCh chan<- string) 
 		}
 	*/
 
-        if evt.PeerID != nil {
+        /*if evt.PeerID != nil {
             fmt.Printf("PeerID: %s\n", string(evt.PeerID))
         }
+        */
 
 	jb, _ := json.Marshal(evt)
 
+         rawBytes := []byte{}
+          var peerID peer.ID
+         if evt.PeerID != nil {
+            rawBytes := []byte(evt.PeerID)
+            peerID = peer.ID(rawBytes)
+          //  fmt.Printf("peerID: %s\n", peerID)
+         }
+
+         recvID := ""
+         if evt.DeliverMessage != nil && evt.DeliverMessage.ReceivedFrom != nil {
+             rawBytes = []byte(evt.DeliverMessage.ReceivedFrom)
+             recvID = base58.Encode(rawBytes)
+           //  fmt.Printf("Receiv: %s\n", recvID)
+          }
+
+          if evt.NewShard != nil && evt.NewShard.ReceivedFrom != nil {
+             rawBytes = []byte(evt.NewShard.ReceivedFrom)
+             recvID = base58.Encode(rawBytes)
+           //  fmt.Printf("Receiv: %s\n", recvID)
+          }
+
+
+         msgID := ""
+         topic := ""
+         if evt.DeliverMessage != nil {
+            rawBytes = []byte(evt.DeliverMessage.MessageID)
+            msgID = base58.Encode(rawBytes)
+           // fmt.Printf("MsgID: %s\n", msgID)
+            topic = string(*evt.DeliverMessage.Topic)
+            //fmt.Printf("Topic: %q\n", topic)
+         }
+         if evt.PublishMessage != nil {
+            rawBytes = []byte(evt.PublishMessage.MessageID)
+            msgID = base58.Encode(rawBytes)
+            //fmt.Printf("MsgID: %s\n", msgID)
+            topic = string(*evt.PublishMessage.Topic)
+            //fmt.Printf("Topic: %q\n", topic)
+         }
+         if evt.NewShard != nil {
+            rawBytes = []byte(evt.NewShard.MessageID)
+            msgID = base58.Encode(rawBytes)
+            //fmt.Printf("MsgID: %s\n", msgID)
+            //fmt.Printf("Topic: %q\n", topic)
+         }
+
+         timestamp:= int64(0)
+         if evt.Timestamp != nil {
+             timestamp= *evt.Timestamp
+            // fmt.Printf("Timestamp: %d\n", timestamp)
+         }
+
+
 	if writetrace {
-		dataToSend := fmt.Sprintf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s", typeStr, len(jb), string(jb))
-		traceCh <- dataToSend
+	     //dataToSend := fmt.Sprintf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s", typeStr, len(jb), string(jb))
+	     fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
+             dataToSend :=fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%d", typeStr, peerID, recvID, msgID, topic, timestamp) 
+	     traceCh <- dataToSend
 	} else {
-		fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
-
+	     //fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
+             fmt.Print("%s\t%s\t%s\t%s\t%s\t%d\n", typeStr, peerID, recvID, msgID, topic, timestamp) 
 	}
-
 	/*
 		     message_type  <- systems information
 		     message_id   <- application layer
@@ -383,7 +439,7 @@ func handleOptimumP2PTrace(data []byte, writetrace bool, traceCh chan<- string) 
 
 }
 
-func writeToFile(ctx context.Context, dataCh <-chan string, done chan<- bool, filename string) {
+func writeToFile(ctx context.Context, dataCh <-chan string, done chan<- bool, filename string, header string) {
 	file, err := os.Create(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -392,6 +448,14 @@ func writeToFile(ctx context.Context, dataCh <-chan string, done chan<- bool, fi
 
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
+
+        // write the header
+        if header != "" {
+	   _, err := writer.WriteString(header + "\n")
+	   if err != nil {
+		log.Printf("Write error: %v", err)
+	   }
+        }
 
 	// Process until channel is closed
 	for data := range dataCh {
