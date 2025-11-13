@@ -432,22 +432,27 @@ If you encounter issues during setup, here are common problems and solutions:
 Follow this workflow when subscriptions are not receiving messages:
 
 1. **Confirm topic subscription**
+
    ```sh
    curl "http://localhost:9091/api/v1/topics?topic=<topic>&nodeinfo=true"
    ```
+
    Ensure the expected peers appear with `nodeinfo=true`.
 
 2. **Inspect mesh propagation**
+
    ```sh
    curl http://localhost:9091/api/v1/p2p-snapshot | jq
    ```
-   
+
    Check that the message hash appears under `seen_message_hashes` (and eventually `fully_decoded_message_hashes`) and that `connected_peers` shows the nodes forwarding shards. If the arrays remain empty, publish test traffic (`make publish 127.0.0.1:33221 <topic> random 5`) and re-check.
 
 3. **Validate proxy routing**
+
    ```sh
    curl http://localhost:8081/api/v1/node-countries | jq
    ```
+
    Ensure the proxy lists every node you expect it to route through. Missing entries indicate connectivity or configuration issues.
 
 4. **Review client**
