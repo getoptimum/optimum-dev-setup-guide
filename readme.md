@@ -59,6 +59,16 @@ This setup is not production-ready but is designed to:
 - .env-based dynamic peer identity setup
 - Optional Auth0 support (disabled by default)
 
+## Key APIs for Debugging
+
+Commonly used endpoints while developing or demonstrating the setup:
+
+- `GET http://localhost:8081/api/v1/node-countries` – shows geolocation for every connected P2P node via the proxy.
+- `GET http://localhost:9091/api/v1/node-state` – lists peer IDs, advertised addresses, subscribed topics, and country metadata for a node.
+- `GET http://localhost:9091/api/v1/p2p-snapshot` – returns detailed mesh snapshots (message hashes, shard status, peer statistics) to troubleshoot propagation.
+- `GET http://localhost:9091/api/v1/topics?topic=<name>&nodeinfo=true` – inspects topic membership with per-peer detail.
+- `GET http://localhost:8081/metrics` – Prometheus metrics from the proxy (enabled by default).
+
 ## Example: Basic Usage
 
 ### Quick Start with Makefile

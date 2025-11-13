@@ -2,7 +2,7 @@
 
 ## **IMPORTANT: Remote P2P Clusters for Distributed Testing**
 
-> **🚨 CRITICAL FOR PARTICIPANTS**: Use these remote clusters for distributed testing and hackathon projects!
+> **🚨 CRITICAL:** Use these remote clusters for distributed testing across environments.
 
 ### **Connecting to Remote Clusters**
 
@@ -49,6 +49,7 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
     - [2. Service Startup](#2-service-startup)
     - [3. Verification](#3-verification)
   - [Monitoring](#monitoring)
+    - [Geographic Network Analysis](#geographic-network-analysis)
   - [Troubleshooting](#troubleshooting)
   - [API Reference](#api-reference)
     - [Proxy API](#proxy-api)
@@ -63,9 +64,14 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
       - [Subscribe to Topic](#subscribe-to-topic-1)
       - [Publish Message](#publish-message-1)
       - [WebSocket Connection](#websocket-connection-1)
+      - [Node Countries](#node-countries)
+      - [Metrics Endpoint](#metrics-endpoint)
     - [P2P Node API](#p2p-node-api)
       - [Node Health](#node-health)
       - [Node State](#node-state)
+      - [Node Config](#node-config)
+      - [P2P Snapshot](#p2p-snapshot)
+      - [Topics](#topics)
     - [gRPC API](#grpc-api)
       - [Service Definition](#service-definition)
       - [Authentication](#authentication)
@@ -89,6 +95,7 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
       - [Get Node Health](#get-node-health)
       - [Get Node State](#get-node-state)
       - [Get Node Version](#get-node-version)
+      - [Node Countries (via Proxy)](#node-countries-via-proxy)
     - [Collecting Trace Data for Experiments](#collecting-trace-data-for-experiments)
       - [How Trace Collection Works](#how-trace-collection-works)
       - [Usage Example](#usage-example)
@@ -114,6 +121,7 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
       - [High Message Throughput](#high-message-throughput)
       - [Low Latency Requirements](#low-latency-requirements)
     - [Log Analysis](#log-analysis)
+    - [Debugging Message Delivery](#debugging-message-delivery)
 - [Proxy logs](#proxy-logs)
 - [P2P node logs](#p2p-node-logs)
 - [All services](#all-services)
@@ -125,7 +133,6 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
     - [CLI Integration](#cli-integration)
     - [API Clients](#api-clients)
 
----
 
 ## Prerequisites
 
@@ -261,8 +268,8 @@ The `.env.example` file contains:
 ```bash
 BOOTSTRAP_PEER_ID=12D3KooWD5RtEPmMR9Yb2ku5VuxqK7Yj1Y5Gv8DmffJ6Ei8maU44
 CLUSTER_ID=docker-dev-cluster
-PROXY_VERSION=v0.0.1-rc8
-P2P_NODE_VERSION=v0.0.1-rc8
+PROXY_VERSION=v0.0.1-rc13
+P2P_NODE_VERSION=v0.0.1-rc13
 ```
 
 **Variables explained:**
@@ -377,7 +384,21 @@ The setup includes Grafana dashboards for visualizing P2P node and proxy metrics
 - URL: `http://localhost:9090`
 - Scrapes metrics from all P2P nodes (port 9090) and proxies (port 8080)
 
----
+### Geographic Network Analysis
+
+Use the geolocation-aware endpoints to understand how your mesh is distributed:
+
+**Proxy view of node geolocation:**
+
+```sh
+curl http://localhost:8081/api/v1/node-countries | jq
+```
+
+**Health and country info of the node:**
+
+```sh
+curl http://localhost:9091/api/v1/health | jq
+```
 
 ## Troubleshooting
 
@@ -405,6 +426,38 @@ If you encounter issues during setup, here are common problems and solutions:
 - Verify all P2P nodes are healthy and running
 - Check that the proxy can reach all P2P node sidecar ports (33212)
 - Ensure the `P2P_NODES` environment variable contains correct node addresses
+
+### Debugging Message Delivery
+
+Follow this workflow when subscriptions are not receiving messages:
+
+1. **Confirm topic subscription**
+
+   ```sh
+   curl "http://localhost:9091/api/v1/topics?topic=<topic>&nodeinfo=true"
+   ```
+
+   Ensure the expected peers appear with `nodeinfo=true`.
+
+2. **Inspect mesh propagation**
+
+   ```sh
+   curl http://localhost:9091/api/v1/p2p-snapshot | jq
+   ```
+
+   Check that the message hash appears under `seen_message_hashes` (and eventually `fully_decoded_message_hashes`) and that `connected_peers` shows the nodes forwarding shards. If the arrays remain empty, publish test traffic (`make publish 127.0.0.1:33221 <topic> random 5`) and re-check.
+
+3. **Validate proxy routing**
+
+   ```sh
+   curl http://localhost:8081/api/v1/node-countries | jq
+   ```
+
+   Ensure the proxy lists every node you expect it to route through. Missing entries indicate connectivity or configuration issues.
+
+4. **Review client**
+
+   Confirm the subscriber process is still connected (WebSocket or gRPC) and using the same `client_id` that was supplied when calling `/api/v1/subscribe`.
 
 ## API Reference
 
@@ -486,7 +539,7 @@ sh ./script/proxy_client.sh publish mytopic 0.6 10
 
 ### Proxy REST API
 
-All proxy endpoints support JWT authentication via `Authorization: Bearer <token>` header.
+The Compose file runs two proxy instances on the host at `http://localhost:8081` and `http://localhost:8082`. Examples below use `proxy-1` (`localhost:8081`). If authentication is enabled, add the header `Authorization: Bearer <token>` to every request.
 
 #### Health Check
 
@@ -494,16 +547,20 @@ All proxy endpoints support JWT authentication via `Authorization: Bearer <token
 curl http://localhost:8081/api/v1/health
 ```
 
-**Response:**
+**Example Response:**
 
 ```json
 {
-  "status": "ok",
-  "memory_used": "8.71",
-  "cpu_used": "0.71", 
-  "disk_used": "51.10"
+  "country": "India",
+  "country_iso": "IN",
+  "cpu_used": "2.15",
+  "disk_used": "75.09",
+  "memory_used": "74.56",
+  "status": "ok"
 }
 ```
+
+Returns proxy health along with geolocation for its connected P2P nodes.
 
 #### Version Information
 
@@ -515,8 +572,8 @@ curl http://localhost:8081/api/v1/version
 
 ```json
 {
-  "version": "v0.0.1-rc3",
-  "commit_hash": "245207d"
+  "version": "v0.0.1-rc13",
+  "commit_hash": "8f3057d"
 }
 ```
 
@@ -526,7 +583,7 @@ curl http://localhost:8081/api/v1/version
 curl -X POST http://localhost:8081/api/v1/subscribe \
   -H "Content-Type: application/json" \
   -d '{
-    "client_id": "your-client-id", 
+    "client_id": "your-client-id",
     "topic": "example-topic",
     "threshold": 0.7
   }'
@@ -543,9 +600,9 @@ curl -X POST http://localhost:8081/api/v1/subscribe \
 
 **Parameters:**
 
-- `client_id`: Client identifier (optional with JWT auth - extracted from claims)
-- `topic`: Topic name to subscribe to
-- `threshold`: Delivery threshold (0.1-1.0, default: 0.1)
+- `client_id`: Required when auth is disabled; with JWT auth the proxy uses the token subject.
+- `topic`: Topic name to subscribe to.
+- `threshold`: Delivery threshold from `0.1` to `1.0` (default `0.1`).
 
 #### Publish Message
 
@@ -554,7 +611,7 @@ curl -X POST http://localhost:8081/api/v1/publish \
   -H "Content-Type: application/json" \
   -d '{
     "client_id": "your-client-id",
-    "topic": "example-topic", 
+    "topic": "example-topic",
     "message": "Hello, world!"
   }'
 ```
@@ -569,15 +626,56 @@ curl -X POST http://localhost:8081/api/v1/publish \
 }
 ```
 
+Use the same `client_id` used during subscription so the proxy can correlate publish and receive flows.
+
 #### WebSocket Connection
 
 ```sh
-wscat -c "ws://localhost:8081/api/v1/ws?client_id=your-client-id"
+wscat -c "ws://localhost:8081/api/v1/ws?client_id=your-client-id" \
+  -H "Authorization: Bearer <token-if-auth-enabled>"
 ```
 
-**Authentication:** Pass JWT in `Authorization` header during connection.
+The WebSocket endpoint streams deliveries for all active subscriptions belonging to the supplied `client_id`.
+
+#### Node Countries
+
+```sh
+curl http://localhost:8081/api/v1/node-countries
+```
+
+Returns geolocation information (country and ISO code) for every connected P2P node. Use this to verify regional coverage or feed dashboards that show geographic distribution.
+
+**Example Response:**
+
+```json
+{
+  "count": 4,
+  "countries": {
+    "p2pnode-1:33212": "India",
+    "p2pnode-2:33212": "India",
+    "p2pnode-3:33212": "India",
+    "p2pnode-4:33212": "India"
+  },
+  "country_isos": {
+    "p2pnode-1:33212": "IN",
+    "p2pnode-2:33212": "IN",
+    "p2pnode-3:33212": "IN",
+    "p2pnode-4:33212": "IN"
+  }
+}
+```
+
+#### Metrics Endpoint
+
+```sh
+curl http://localhost:8081/metrics
+```
+
+Prometheus-formatted metrics are enabled by default.
 
 ### P2P Node API
+
+Each node exposes an HTTP API on the host ports `9091-9094` (mapping to container port `9090`). These endpoints surface health, topology, and protocol diagnostics.
 
 #### Node Health
 
@@ -589,13 +687,17 @@ curl http://localhost:9091/api/v1/health
 
 ```json
 {
-  "cpu_used": "0.29",
-  "disk_used": "84.05", 
-  "memory_used": "6.70",
+  "country": "India",
+  "country_iso": "IN",
+  "cpu_used": "2.78",
+  "disk_used": "75.09",
+  "memory_used": "74.72",
   "mode": "optimum",
   "status": "ok"
 }
 ```
+
+Provides node health, resource utilisation, and geolocation metadata.
 
 #### Node State
 
@@ -608,14 +710,72 @@ curl http://localhost:9091/api/v1/node-state
 ```json
 {
   "pub_key": "12D3KooWMwzQYKhRvLRsiKignZ2vAtkr1nPYiDWA7yeZvRqC9ST9",
+  "country": "United States",
+  "country_iso": "US",
+  "addresses": ["/ip4/172.28.0.12/tcp/7070"],
   "peers": [
     "12D3KooWDLm7bSFnoqP4mhoJminiCixbR2Lwyqu9sU5EDKVvXM5j",
     "12D3KooWJrPmTdXj9hirigHs88BHe6DApLpdXiKrwF1V8tNq9KP7"
   ],
-  "addresses": ["/ip4/172.28.0.12/tcp/7070"],
   "topics": ["demo", "example-topic"]
 }
 ```
+
+Useful for confirming peer connectivity, advertised addresses, and current topic assignments.
+
+#### Node Config
+
+```sh
+curl http://localhost:9091/api/v1/config
+```
+
+Returns the active configuration for the node (cluster ID, protocol mode, mesh parameters, etc.) with sensitive values removed. Use this to verify that environment variables are applied as expected.
+
+#### P2P Snapshot
+
+```sh
+curl http://localhost:9091/api/v1/p2p-snapshot
+```
+
+Produces a detailed snapshot that includes message hashes (seen vs decoded), shard statistics, peer scores, and per-connection metadata.
+
+**Example:**
+
+```json
+{
+  "seen_message_hashes": [],
+  "fully_decoded_message_hashes": [],
+  "undecoded_shard_buffer_sizes": {},
+  "total_peer_count": 0,
+  "full_message_node_count": 0,
+  "partial_message_node_count": 0,
+  "connected_peers": []
+}
+```
+
+Run a publish workflow (for example `make publish 127.0.0.1:33221 testtopic random 5`) and re-query to see hashes move from `seen_message_hashes` to `fully_decoded_message_hashes`, plus per-peer shard stats in `connected_peers`.
+
+#### Topics
+
+**List all topics with peer counts:**
+
+```sh
+curl http://localhost:9091/api/v1/topics
+```
+
+**Inspect a single topic:**
+
+```sh
+curl "http://localhost:9091/api/v1/topics?topic=example-topic"
+```
+
+**Include detailed peer information:**
+
+```sh
+curl "http://localhost:9091/api/v1/topics?topic=example-topic&nodeinfo=true"
+```
+
+The topics endpoint lets you audit subscription state across the mesh. Set `nodeinfo=true` to obtain peer IDs, addresses, and connection status for every subscriber on the requested topic.
 
 ### gRPC API
 
@@ -877,7 +1037,15 @@ curl http://localhost:9091/api/v1/health
 response:
 
 ```json
-{"cpu_used":"0.29","disk_used":"84.05","memory_used":"6.70","mode":"optimum","status":"ok"}
+{
+  "status": "ok",
+  "mode": "optimum",
+  "cpu_used": "0.29",
+  "memory_used": "6.70",
+  "disk_used": "84.05",
+  "country": "United States",
+  "country_iso": "US"
+}
 ```
 
 #### Get Node State
@@ -891,6 +1059,8 @@ response:
 ```json
 {
   "pub_key": "12D3KooWMwzQYKhRvLRsiKignZ2vAtkr1nPYiDWA7yeZvRqC9ST9",
+  "country": "United States",
+  "country_iso": "US",
   "peers": [
     "12D3KooWDLm7bSFnoqP4mhoJminiCixbR2Lwyqu9sU5EDKVvXM5j",
     "12D3KooWJrPmTdXj9hirigHs88BHe6DApLpdXiKrwF1V8tNq9KP7",
@@ -909,9 +1079,20 @@ curl http://localhost:9091/api/v1/version
 
 response:
 
-```sh
-{"commit_hash":"rc4","version":""}
+```json
+{
+  "version": "v0.0.1-rc13",
+  "commit_hash": "8f3057d"
+}
 ```
+
+#### Node Countries (via Proxy)
+
+```sh
+curl http://localhost:8081/api/v1/node-countries
+```
+
+Returns the same geolocation metadata but aggregated across all nodes that the proxy currently manages.
 
 ### Collecting Trace Data for Experiments
 
