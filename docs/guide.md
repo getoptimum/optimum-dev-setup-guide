@@ -1077,7 +1077,7 @@ response:
 ```json
 {
   "version": "v0.0.1-rc9",
-  "commit_hash": "245207d"
+  "commit_hash": "8f3057d"
 }
 ```
 
