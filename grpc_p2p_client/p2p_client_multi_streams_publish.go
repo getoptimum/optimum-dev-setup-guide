@@ -85,6 +85,7 @@ func main() {
 	// Buffered channel to prevent blocking
 	dataCh := make(chan string, 100)
 	done := make(chan bool)
+        *dataSize = int(float32(*dataSize)/2.0)
 
 	var wg sync.WaitGroup
 	// Start writing the has of the published data
