@@ -122,6 +122,7 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 	default:
 	}
 
+	for i := 0; i < *count; i++ {
 	conn, err := grpc.NewClient(ip,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(
@@ -132,7 +133,7 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
 	}
-	defer conn.Close()
+	//defer conn.Close()
 	println(fmt.Sprintf("Connected to node at: %s…", ip))
 
 	client := protobuf.NewCommandStreamClient(conn)
@@ -143,7 +144,7 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		log.Fatalf("ListenCommands: %v", err)
 	}
 
-	for i := 0; i < *count; i++ {
+	//for i := 0; i < *count; i++ {
 		start := time.Now()
 		var data []byte
 		//currentTime := time.Now().UnixNano()
@@ -163,6 +164,7 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		if err := stream.Send(pubReq); err != nil {
 			log.Fatalf("send publish: %v", err)
 		}
+		fmt.Printf("Published data size  %d\n", len(data))
 
 		elapsed := time.Since(start)
 
@@ -178,6 +180,7 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		if *sleep > 0 {
 			time.Sleep(*sleep)
 		}
+	 conn.Close()
 	}
 
 	return nil
