@@ -2,45 +2,85 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "optimum-gateway/proto;proto";
+option go_package = "optimum-proxy/proto;proto";
 
-// CommandStream establish a stream connection to send and receive commands
-// between the Optimum Gateway and the p2p node
+// ------------------------------------------------------------
+// CommandStream
+// ------------------------------------------------------------
+// gRPC service used between the Optimum Proxy and a P2P node.
+// - Proxy: external-facing component that connects apps/validators
+// - Node: participates in pubsub/gossip and handles commands
 service CommandStream {
+  // Opens a bidirectional streaming channel where:
+  // - The Proxy sends commands (Request)
+  // - The Node responds with events/data (Response)
   rpc ListenCommands (stream Request) returns (stream Response) {}
+
+  // Returns a health report from the node, including:
+  //   - basic liveness (status)
+  //   - node mode (gateway, relay, etc.)
+  //   - resource usage
   rpc Health (Void) returns (HealthResponse) {}
-  rpc ListTopics(Void) returns (TopicList) {}
+
+  // Returns a list of all topics currently subscribed to
+  // by the node in the pubsub network.
+  rpc ListTopics (Void) returns (TopicList) {}
 }
 
+// Empty message for requests that don't require input.
 message Void {}
 
+// ------------------------------------------------------------
+// HealthResponse
+// ------------------------------------------------------------
+// Provides health and resource usage information about a node.
 message HealthResponse {
-  bool status = 1;
-  string nodeMode = 2;
-  float memoryUsed = 3;
-  float cpuUsed = 4;
-  float diskUsed = 5;
+  bool status = 1;       // true = node is healthy, false = unhealthy
+  string nodeMode = 2;   // operating mode (e.g., "gateway", "relay", "hybrid")
+  float memoryUsed = 3;  // memory usage (%)
+  float cpuUsed = 4;     // CPU usage (%)
+  float diskUsed = 5;    // disk usage (%)
+  string p2pAddress = 6; // libp2p or mumP2P multiaddress of the node
+  string country = 7;     // country name of the node
+  string country_iso = 8; // country ISO code of the node
 }
 
+// ------------------------------------------------------------
+// ResponseType
+// ------------------------------------------------------------
+// Defines the type of response returned by the node.
 enum ResponseType {
-  Unknown = 0;
-  Message = 1;
-  MessageTraceOptimumP2P = 2;
-  MessageTraceGossipSub = 3;
+  Unknown = 0;                 // Unspecified / invalid type
+  Message = 1;                 // Standard message payload
+  MessageTraceMumP2P = 2;  // Tracing/debug info from mumP2P
+  MessageTraceGossipSub = 3;   // Tracing/debug info from GossipSub
 }
 
+// ------------------------------------------------------------
+// Request
+// ------------------------------------------------------------
+// A command sent from the Optimum Proxy to the node.
 message Request {
-  int32 command = 1;
-  bytes data = 2;
-  string topic = 3;
+  int32 command = 1;     // Numeric command identifier (protocol-defined)
+  bytes data = 2;        // Command payload (serialized object or raw bytes)
+  string topic = 3;      // Target topic (if applicable)
+  string jwt_token = 4;  // Auth token for validation & rate limiting
 }
 
+// ------------------------------------------------------------
+// Response
+// ------------------------------------------------------------
+// A response sent from the node back to the Optimum Proxy.
 message Response {
-  ResponseType command = 1;
-  bytes data = 2;
-  bytes metadata = 3;
+  ResponseType command = 1; // Type of response (see ResponseType enum)
+  bytes data = 2;           // Response payload
+  bytes metadata = 3;       // Extra metadata (optional: headers, trace, proofs)
 }
 
+// ------------------------------------------------------------
+// TopicList
+// ------------------------------------------------------------
+// Represents the list of active topics subscribed to by a node.
 message TopicList {
-  repeated string topics = 1;
+  repeated string topics = 1; // Array of topic strings
 }

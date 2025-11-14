@@ -235,7 +235,7 @@ echo
 
 echo -e "${YELLOW}Test: Publish validation (empty message)${NC}"
 resp=$(api_publish "$CLIENT_ID" "$TOPIC" "")
-test_result "$resp" 'message is missing' "Publish validation (empty message)"
+test_result "$resp" 'either message or message_length must be provided' "Publish validation (empty message)"
 echo
 
 echo -e "${YELLOW}Test: Publish validation (missing topic)${NC}"
@@ -249,7 +249,7 @@ echo -e "${YELLOW}Test: Publish validation (missing message)${NC}"
 resp=$(curl -s -X POST "$PROXY_URL/api/v1/publish" \
   -H "Content-Type: application/json" \
   -d "{\"client_id\": \"$CLIENT_ID\", \"topic\": \"$TOPIC\"}")
-test_result "$resp" 'message is missing' "Publish validation (missing message)"
+test_result "$resp" 'either message or message_length must be provided' "Publish validation (missing message)"
 echo
 
 # Summary

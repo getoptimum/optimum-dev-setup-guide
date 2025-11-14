@@ -197,7 +197,11 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 		messageSize := len(p2pMessage.Message)
 
 		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
-		fmt.Printf("Recv message: %d %s\n\n", messageSize, string(p2pMessage.Message))
+		fmt.Printf("Recv message: [%d] [%d %d] %s\n\n", n, currentTime, messageSize, string(p2pMessage.Message))
+	case protobuf.ResponseType_MessageTraceGossipSub:
+		handleGossipSubTrace(resp.GetData())
+	case protobuf.ResponseType_MessageTraceMumP2P:
+		handleOptimumP2PTrace(resp.GetData())
 	case protobuf.ResponseType_Unknown:
 	default:
 		log.Println("Unknown response command:", resp.GetCommand())
