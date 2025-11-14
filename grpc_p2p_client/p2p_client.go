@@ -194,7 +194,6 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 			log.Printf("Error unmarshalling message: %v", err)
 			return
 		}
-
 		messageSize := len(p2pMessage.Message)
 
 		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])

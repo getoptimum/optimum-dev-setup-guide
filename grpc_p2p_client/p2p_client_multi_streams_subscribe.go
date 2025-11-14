@@ -365,8 +365,6 @@ func handleOptimumP2PTrace(data []byte, writetrace bool, traceCh chan<- string) 
         }
         */
 
-	jb, _ := json.Marshal(evt)
-
          rawBytes := []byte{}
           var peerID peer.ID
          if evt.PeerID != nil {
@@ -387,7 +385,6 @@ func handleOptimumP2PTrace(data []byte, writetrace bool, traceCh chan<- string) 
              recvID = base58.Encode(rawBytes)
            //  fmt.Printf("Receiv: %s\n", recvID)
           }
-
 
          msgID := ""
          topic := ""
@@ -419,9 +416,11 @@ func handleOptimumP2PTrace(data []byte, writetrace bool, traceCh chan<- string) 
          }
 
 
+	//jb, _ := json.Marshal(evt)
+
 	if writetrace {
 	     //dataToSend := fmt.Sprintf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s", typeStr, len(jb), string(jb))
-	     fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
+//	     fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
              dataToSend :=fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%d", typeStr, peerID, recvID, msgID, topic, timestamp) 
 	     traceCh <- dataToSend
 	} else {
