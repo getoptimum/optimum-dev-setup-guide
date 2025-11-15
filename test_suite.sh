@@ -120,7 +120,7 @@ echo
 # Test 2: Subscribe (empty topic)
 echo -e "${YELLOW}Test: Subscribe (empty topic)${NC}"
 resp=$(api_subscribe "$CLIENT_ID" "" 0.7)
-test_result "$resp" 'topic is missing' "Subscribe (empty topic)"
+test_result "$resp" 'missing topic' "Subscribe (empty topic)"
 echo
 
 # Test 3: Publish (valid) - but first ensure subscription exists
@@ -230,7 +230,7 @@ echo
 
 echo -e "${YELLOW}Test: Subscribe validation (empty topic)${NC}"
 resp=$(api_subscribe "$CLIENT_ID" "" 0.7)
-test_result "$resp" 'topic is missing' "Subscribe validation (empty topic)"
+test_result "$resp" 'missing topic' "Subscribe validation (empty topic)"
 echo
 
 echo -e "${YELLOW}Test: Publish validation (empty message)${NC}"
@@ -242,7 +242,7 @@ echo -e "${YELLOW}Test: Publish validation (missing topic)${NC}"
 resp=$(curl -s -X POST "$PROXY_URL/api/v1/publish" \
   -H "Content-Type: application/json" \
   -d "{\"client_id\": \"$CLIENT_ID\", \"message\": \"Hello\"}")
-test_result "$resp" 'topic is missing' "Publish validation (missing topic)"
+test_result "$resp" 'missing topic' "Publish validation (missing topic)"
 echo
 
 echo -e "${YELLOW}Test: Publish validation (missing message)${NC}"

@@ -17,10 +17,7 @@ import (
 	"time"
 
 	protobuf "p2p_client/grpc"
-	optsub "p2p_client/grpc/mump2p_trace"
 
-	"github.com/gogo/protobuf/proto"
-	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -197,17 +194,17 @@ func handleResponse(resp *protobuf.Response, counter *int32) {
 			log.Printf("Error unmarshalling message: %v", err)
 			return
 		}
+		messageSize := len(p2pMessage.Message)
 		n := atomic.AddInt32(counter, 1)
 
-		currentTime := time.Now().UnixNano()
-		messageSize := len(p2pMessage.Message)
-
 		//fmt.Printf("Recv message: [%d] [%d %d] %s\n\n",n,  currentTime, messageSize, string(p2pMessage.Message)[0:100])
-		fmt.Printf("Recv message: [%d] [%d %d] %s\n\n", n, currentTime, messageSize, string(p2pMessage.Message))
+		fmt.Printf("Recv message: [%d] [%d] %s\n\n", n, messageSize, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
-		handleGossipSubTrace(resp.GetData())
+		// Note: These trace handlers are not implemented in this file
+		log.Printf("GossipSub trace received but handler not implemented")
 	case protobuf.ResponseType_MessageTraceMumP2P:
-		handleOptimumP2PTrace(resp.GetData())
+		// Note: These trace handlers are not implemented in this file
+		log.Printf("MumP2P trace received but handler not implemented")
 	case protobuf.ResponseType_Unknown:
 	default:
 		log.Println("Unknown response command:", resp.GetCommand())
@@ -219,49 +216,4 @@ func headHex(b []byte, n int) string {
 		b = b[:n]
 	}
 	return hex.EncodeToString(b)
-}
-
-func handleGossipSubTrace(data []byte) {
-	evt := &pubsubpb.TraceEvent{}
-	if err := proto.Unmarshal(data, evt); err != nil {
-		fmt.Printf("[TRACE] GossipSub decode error: %v raw=%dB head=%s\n",
-			err, len(data), headHex(data, 64))
-		return
-	}
-
-	ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
-	// print type
-	fmt.Printf("[TRACE] GossipSub type=%s ts=%s size=%dB\n", evt.GetType().String(), ts, len(data))
-	jb, _ := json.Marshal(evt)
-	fmt.Printf("[TRACE] GossipSub JSON (%dB): %s\n", len(jb), string(jb))
-}
-
-func handleOptimumP2PTrace(data []byte) {
-	evt := &optsub.TraceEvent{}
-	if err := proto.Unmarshal(data, evt); err != nil {
-		fmt.Printf("[TRACE] OptimumP2P decode error: %v\n", err)
-		return
-	}
-
-	// human-readable timestamp
-	ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
-
-	// print type
-	typeStr := optsub.TraceEvent_Type_name[int32(evt.GetType())]
-	fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s size=%dB\n", typeStr, ts, len(data))
-
-	// if shard-related
-	switch evt.GetType() {
-	case optsub.TraceEvent_NEW_SHARD:
-		fmt.Printf("  NEW_SHARD id=%x coeff=%x\n", evt.GetNewShard().GetMessageID(), evt.GetNewShard().GetCoefficients())
-	case optsub.TraceEvent_DUPLICATE_SHARD:
-		fmt.Printf("  DUPLICATE_SHARD id=%x\n", evt.GetDuplicateShard().GetMessageID())
-	case optsub.TraceEvent_UNHELPFUL_SHARD:
-		fmt.Printf("  UNHELPFUL_SHARD id=%x\n", evt.GetUnhelpfulShard().GetMessageID())
-	case optsub.TraceEvent_UNNECESSARY_SHARD:
-		fmt.Printf("  UNNECESSARY_SHARD id=%x\n", evt.GetUnnecessaryShard().GetMessageID())
-	}
-
-	jb, _ := json.Marshal(evt)
-	fmt.Printf("[TRACE] OptimumP2P JSON (%dB): %s\n", len(jb), string(jb))
 }
