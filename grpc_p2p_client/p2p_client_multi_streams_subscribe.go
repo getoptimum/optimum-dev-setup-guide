@@ -253,7 +253,7 @@ func handleResponse(ip string, resp *protobuf.Response, counter *int32,
 		}
 
 		//fmt.Printf("Recv message: %s %d %s\n", ip,  messageSize, string(p2pMessage.Message))
-	case protobuf.ResponseType_MessageTraceOptimumP2P:
+	case protobuf.ResponseType_MessageTraceMumP2P:
 		handleOptimumP2PTrace(resp.GetData(), writetrace, traceCh)
 	case protobuf.ResponseType_MessageTraceGossipSub:
 		handleGossipSubTrace(resp.GetData(), writetrace, traceCh)
