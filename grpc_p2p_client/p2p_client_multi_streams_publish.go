@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
-	mathrand "math/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	mathrand "math/rand"
 	"os"
 	"os/signal"
 	"strings"
@@ -48,7 +48,7 @@ var (
 
 	// optional: number of messages to publish (for stress testing or batch sending)
 	count    = flag.Int("count", 1, "number of messages to publish")
-	poisson    = flag.Bool("poisson", false, "Enable Poisson arrival")
+	poisson  = flag.Bool("poisson", false, "Enable Poisson arrival")
 	dataSize = flag.Int("datasize", 100, "size of random of messages to publish")
 	// optional: sleep duration between publishes
 	sleep    = flag.Duration("sleep", 50*time.Millisecond, "optional delay between publishes (e.g., 1s, 500ms)")
@@ -86,12 +86,12 @@ func main() {
 
 	// Buffered channel to prevent blocking
 	dataCh := make(chan string, 100)
-	done := make(chan bool)
 	*dataSize = int(float32(*dataSize) / 2.0)
-
+	var done chan bool
 	var wg sync.WaitGroup
 	// Start writing the has of the published data
 	if *output != "" {
+		done := make(chan bool)
 		go func() {
 			header := fmt.Sprintf("sender\tsize\tsha256(msg)")
 			go writeHashToFile(dataCh, done, *output, header)
@@ -109,20 +109,22 @@ func main() {
 	}
 	wg.Wait()
 	close(dataCh)
-	<-done
+	if done != nil {
+		<-done
+	}
 
 }
 
 func sendMessages(ctx context.Context, ip string, datasize int, write bool, dataCh chan<- string) error {
 	// connect with simple gRPC settings
-	select {
-	case <-ctx.Done():
-		log.Printf("[%s] context canceled, stopping", ip)
-		return ctx.Err()
-	default:
-	}
-
 	for i := 0; i < *count; i++ {
+		select {
+		case <-ctx.Done():
+			log.Printf("[%s] context canceled, stopping", ip)
+			return ctx.Err()
+		default:
+		}
+
 		conn, err := grpc.NewClient(ip,
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 			grpc.WithDefaultCallOptions(
@@ -149,7 +151,8 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		//currentTime := time.Now().UnixNano()
 		randomBytes := make([]byte, datasize)
 		if _, err := rand.Read(randomBytes); err != nil {
-			log.Fatalf("failed to generate random bytes: %v", err)
+			return fmt.Errorf("[%s] failed to generate random bytes: %w", ip, err)
+
 		}
 
 		randomSuffix := hex.EncodeToString(randomBytes)
@@ -161,7 +164,7 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		}
 
 		if err := stream.Send(pubReq); err != nil {
-			log.Fatalf("send publish: %v", err)
+			return fmt.Errorf("[%s] send publish: %w", ip, err)
 		}
 		fmt.Printf("Published data size  %d\n", len(data))
 
@@ -176,16 +179,16 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		}
 		fmt.Printf("Published %s to %q (took %v)\n", dataToSend, *topic, elapsed)
 
-                if *poisson {
-                   lambda := 1.0 / (*sleep).Seconds()
-                   interval := mathrand.ExpFloat64() / lambda
-                   waitTime := time.Duration(interval * float64(time.Second))
-		   time.Sleep(waitTime)
-                } else {
-   		   time.Sleep(*sleep)
+		if *poisson {
+			lambda := 1.0 / (*sleep).Seconds()
+			interval := mathrand.ExpFloat64() / lambda
+			waitTime := time.Duration(interval * float64(time.Second))
+			time.Sleep(waitTime)
+		} else {
+			time.Sleep(*sleep)
 
-                }
-                 
+		}
+
 		conn.Close()
 	}
 
