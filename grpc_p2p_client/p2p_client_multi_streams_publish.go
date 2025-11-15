@@ -91,7 +91,7 @@ func main() {
 	var wg sync.WaitGroup
 	// Start writing the has of the published data
 	if *output != "" {
-		done := make(chan bool)
+		done = make(chan bool)
 		go func() {
 			header := fmt.Sprintf("sender\tsize\tsha256(msg)")
 			go writeHashToFile(dataCh, done, *output, header)
