@@ -71,7 +71,7 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: ${{ env.lint-version }}
-          args: --timeout 10m --skip-dirs-use-default
+          args: --timeout 10m
           only-new-issues: true
           working-directory: ./
         continue-on-error: true
