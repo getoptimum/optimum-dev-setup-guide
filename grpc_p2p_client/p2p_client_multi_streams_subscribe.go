@@ -3,12 +3,12 @@ package main
 import (
 	"bufio"
 	"context"
-        "github.com/mr-tron/base58"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/mr-tron/base58"
 	"io"
 	"log"
 	"math"
@@ -19,13 +19,13 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	protobuf "p2p_client/grpc"
-	optsub "p2p_client/grpc/mump2p_trace"
-       "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/gogo/protobuf/proto"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	protobuf "p2p_client/grpc"
+	optsub "p2p_client/grpc/mump2p_trace"
 )
 
 // P2PMessage represents a message structure used in P2P communication
@@ -88,31 +88,33 @@ func main() {
 	// Buffered channel to prevent blocking
 	dataCh := make(chan string, 100)
 	traceCh := make(chan string, 100)
-	dataDone := make(chan bool)
-	traceDone := make(chan bool)
+	var dataDone chan bool
+	var traceDone chan bool
 
 	// Launch goroutines with synchronization
 	var wg sync.WaitGroup
 	if *outputData != "" {
+		dataDone = make(chan bool)
 		go func() {
-                        defer wg.Done()
-                        header := fmt.Sprintf("receiver\tsender\tsize\tsha256(msg)") 
+			defer wg.Done()
+			header := fmt.Sprintf("receiver\tsender\tsize\tsha256(msg)")
 			go writeToFile(ctx, dataCh, dataDone, *outputData, header)
 		}()
 	}
 
 	if *outputTrace != "" {
+		traceDone = make(chan bool)
 		go func() {
-                        defer wg.Done()
-                        header := "" //fmt.Sprintf("sender\tsize\tsha256(msg)") 
+			defer wg.Done()
+			header := "" //fmt.Sprintf("sender\tsize\tsha256(msg)")
 			go writeToFile(ctx, traceCh, traceDone, *outputTrace, header)
 		}()
 	}
 
 	for _, ip := range ips {
-                wg.Add(1);
+		wg.Add(1)
 		go func(ip string) {
-                        defer wg.Done()
+			defer wg.Done()
 			receiveMessages(ctx, ip, *outputData != "", dataCh, *outputTrace != "", traceCh)
 		}(ip)
 	}
@@ -120,8 +122,12 @@ func main() {
 	wg.Wait()
 	close(dataCh)
 	close(traceCh)
-	<-dataDone
-	<-traceDone
+	if dataDone != nil {
+		<-dataDone
+	}
+	if traceDone != nil {
+		<-traceDone
+	}
 }
 
 func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan<- string,
@@ -284,53 +290,53 @@ func handleGossipSubTrace(data []byte, writetrace bool, traceCh chan<- string) {
 	//fmt.Printf("[TRACE] GossipSub type=%s ts=%s size=%dB\n", evt.GetType().String(), ts, len(data))
 	//fmt.Printf("[TRACE] GossipSub JSON (%dB): %s\n", len(jb), string(jb))
 
-         rawBytes := []byte{}
-          var peerID peer.ID
-         if evt.PeerID != nil {
-            rawBytes := []byte(evt.PeerID)
-            peerID = peer.ID(rawBytes)
-          //  fmt.Printf("peerID: %s\n", peerID)
-         }
+	rawBytes := []byte{}
+	var peerID peer.ID
+	if evt.PeerID != nil {
+		rawBytes := []byte(evt.PeerID)
+		peerID = peer.ID(rawBytes)
+		//  fmt.Printf("peerID: %s\n", peerID)
+	}
 
-         recvID := ""
-         if evt.DeliverMessage != nil && evt.DeliverMessage.ReceivedFrom != nil {
-             rawBytes = []byte(evt.DeliverMessage.ReceivedFrom)
-             recvID = base58.Encode(rawBytes)
-           //  fmt.Printf("Receiv: %s\n", recvID)
-          }
+	recvID := ""
+	if evt.DeliverMessage != nil && evt.DeliverMessage.ReceivedFrom != nil {
+		rawBytes = []byte(evt.DeliverMessage.ReceivedFrom)
+		recvID = base58.Encode(rawBytes)
+		//  fmt.Printf("Receiv: %s\n", recvID)
+	}
 
-         msgID := ""
-         topic := ""
-         if evt.DeliverMessage != nil {
-            rawBytes = []byte(evt.DeliverMessage.MessageID)
-            msgID = base58.Encode(rawBytes)
-           // fmt.Printf("MsgID: %s\n", msgID)
-            topic = string(*evt.DeliverMessage.Topic)
-            //fmt.Printf("Topic: %q\n", topic)
-         }
-         if evt.PublishMessage != nil {
-            rawBytes = []byte(evt.PublishMessage.MessageID)
-            msgID = base58.Encode(rawBytes)
-            //fmt.Printf("MsgID: %s\n", msgID)
-            topic = string(*evt.PublishMessage.Topic)
-            //fmt.Printf("Topic: %q\n", topic)
-         }
- 
-         timestamp:= int64(0)
-         if evt.Timestamp != nil {
-             timestamp= *evt.Timestamp
-            // fmt.Printf("Timestamp: %d\n", timestamp)
-         }
+	msgID := ""
+	topic := ""
+	if evt.DeliverMessage != nil {
+		rawBytes = []byte(evt.DeliverMessage.MessageID)
+		msgID = base58.Encode(rawBytes)
+		// fmt.Printf("MsgID: %s\n", msgID)
+		topic = string(*evt.DeliverMessage.Topic)
+		//fmt.Printf("Topic: %q\n", topic)
+	}
+	if evt.PublishMessage != nil {
+		rawBytes = []byte(evt.PublishMessage.MessageID)
+		msgID = base58.Encode(rawBytes)
+		//fmt.Printf("MsgID: %s\n", msgID)
+		topic = string(*evt.PublishMessage.Topic)
+		//fmt.Printf("Topic: %q\n", topic)
+	}
+
+	timestamp := int64(0)
+	if evt.Timestamp != nil {
+		timestamp = *evt.Timestamp
+		// fmt.Printf("Timestamp: %d\n", timestamp)
+	}
 
 	//jb, _ := json.Marshal(evt)
 	//fmt.Printf("[TRACE] GossipSub JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
 	if writetrace {
 		//dataToSend := fmt.Sprintf("[TRACE] GossipSub JSON message_type=%s, (%dB): %s", typeStr, len(jb), string(jb))
-                dataToSend :=fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%d", typeStr, peerID, recvID, msgID, topic, timestamp) 
+		dataToSend := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%d", typeStr, peerID, recvID, msgID, topic, timestamp)
 		traceCh <- dataToSend
 	} else {
 		//fmt.Printf("[TRACE] GossipSub JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
-                fmt.Print("%s\t%s\t%s\t%s\t%s\t%d\n", typeStr, peerID, recvID, msgID, topic, timestamp) 
+		fmt.Print("%s\t%s\t%s\t%s\t%s\t%d\n", typeStr, peerID, recvID, msgID, topic, timestamp)
 	}
 
 }
@@ -362,79 +368,78 @@ func handleOptimumP2PTrace(data []byte, writetrace bool, traceCh chan<- string) 
 		}
 	*/
 
-        /*if evt.PeerID != nil {
-            fmt.Printf("PeerID: %s\n", string(evt.PeerID))
-        }
-        */
+	/*if evt.PeerID != nil {
+	      fmt.Printf("PeerID: %s\n", string(evt.PeerID))
+	  }
+	*/
 
-         rawBytes := []byte{}
-          var peerID peer.ID
-         if evt.PeerID != nil {
-            rawBytes := []byte(evt.PeerID)
-            peerID = peer.ID(rawBytes)
-          //  fmt.Printf("peerID: %s\n", peerID)
-         }
+	rawBytes := []byte{}
+	var peerID peer.ID
+	if evt.PeerID != nil {
+		rawBytes := []byte(evt.PeerID)
+		peerID = peer.ID(rawBytes)
+		//  fmt.Printf("peerID: %s\n", peerID)
+	}
 
-         recvID := ""
-         if evt.DeliverMessage != nil && evt.DeliverMessage.ReceivedFrom != nil {
-             rawBytes = []byte(evt.DeliverMessage.ReceivedFrom)
-             recvID = base58.Encode(rawBytes)
-           //  fmt.Printf("Receiv: %s\n", recvID)
-          }
+	recvID := ""
+	if evt.DeliverMessage != nil && evt.DeliverMessage.ReceivedFrom != nil {
+		rawBytes = []byte(evt.DeliverMessage.ReceivedFrom)
+		recvID = base58.Encode(rawBytes)
+		//  fmt.Printf("Receiv: %s\n", recvID)
+	}
 
-          if evt.NewShard != nil && evt.NewShard.ReceivedFrom != nil {
-             rawBytes = []byte(evt.NewShard.ReceivedFrom)
-             recvID = base58.Encode(rawBytes)
-           //  fmt.Printf("Receiv: %s\n", recvID)
-          }
+	if evt.NewShard != nil && evt.NewShard.ReceivedFrom != nil {
+		rawBytes = []byte(evt.NewShard.ReceivedFrom)
+		recvID = base58.Encode(rawBytes)
+		//  fmt.Printf("Receiv: %s\n", recvID)
+	}
 
-         msgID := ""
-         topic := ""
-         if evt.DeliverMessage != nil {
-            rawBytes = []byte(evt.DeliverMessage.MessageID)
-            msgID = base58.Encode(rawBytes)
-           // fmt.Printf("MsgID: %s\n", msgID)
-            topic = string(*evt.DeliverMessage.Topic)
-            //fmt.Printf("Topic: %q\n", topic)
-         }
-         if evt.PublishMessage != nil {
-            rawBytes = []byte(evt.PublishMessage.MessageID)
-            msgID = base58.Encode(rawBytes)
-            //fmt.Printf("MsgID: %s\n", msgID)
-            topic = string(*evt.PublishMessage.Topic)
-            //fmt.Printf("Topic: %q\n", topic)
-         }
-         if evt.NewShard != nil {
-            rawBytes = []byte(evt.NewShard.MessageID)
-            msgID = base58.Encode(rawBytes)
-            //fmt.Printf("MsgID: %s\n", msgID)
-            //fmt.Printf("Topic: %q\n", topic)
-         }
+	msgID := ""
+	topic := ""
+	if evt.DeliverMessage != nil {
+		rawBytes = []byte(evt.DeliverMessage.MessageID)
+		msgID = base58.Encode(rawBytes)
+		// fmt.Printf("MsgID: %s\n", msgID)
+		topic = string(*evt.DeliverMessage.Topic)
+		//fmt.Printf("Topic: %q\n", topic)
+	}
+	if evt.PublishMessage != nil {
+		rawBytes = []byte(evt.PublishMessage.MessageID)
+		msgID = base58.Encode(rawBytes)
+		//fmt.Printf("MsgID: %s\n", msgID)
+		topic = string(*evt.PublishMessage.Topic)
+		//fmt.Printf("Topic: %q\n", topic)
+	}
+	if evt.NewShard != nil {
+		rawBytes = []byte(evt.NewShard.MessageID)
+		msgID = base58.Encode(rawBytes)
+		//fmt.Printf("MsgID: %s\n", msgID)
+		//fmt.Printf("Topic: %q\n", topic)
+	}
 
-         timestamp:= int64(0)
-         if evt.Timestamp != nil {
-             timestamp= *evt.Timestamp
-            // fmt.Printf("Timestamp: %d\n", timestamp)
-         }
-
+	timestamp := int64(0)
+	if evt.Timestamp != nil {
+		timestamp = *evt.Timestamp
+		// fmt.Printf("Timestamp: %d\n", timestamp)
+	}
 
 	//jb, _ := json.Marshal(evt)
 
 	if writetrace {
-	     //dataToSend := fmt.Sprintf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s", typeStr, len(jb), string(jb))
-//	     fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
-             dataToSend :=fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%d", typeStr, peerID, recvID, msgID, topic, timestamp) 
-	     traceCh <- dataToSend
+		//dataToSend := fmt.Sprintf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s", typeStr, len(jb), string(jb))
+		//	     fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
+		dataToSend := fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%d", typeStr, peerID, recvID, msgID, topic, timestamp)
+		traceCh <- dataToSend
 	} else {
-	     //fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
-             fmt.Print("%s\t%s\t%s\t%s\t%s\t%d\n", typeStr, peerID, recvID, msgID, topic, timestamp) 
+		//fmt.Printf("[TRACE] OptimumP2P JSON message_type=%s, (%dB): %s\n", typeStr, len(jb), string(jb))
+		fmt.Print("%s\t%s\t%s\t%s\t%s\t%d\n", typeStr, peerID, recvID, msgID, topic, timestamp)
 	}
 	/*
-		     message_type  <- systems information
-		     message_id   <- application layer
-	     	     time_stamp  <- event occuring the event  publish, new shard, duplicate shard
-		     receiver_id
-		     sender_id
+			     message_type  <- systems information
+			     message_id   <- application layer
+		     	     time_stamp  <- event occuring the event  publish, new shard, duplicate shard
+			     receiver_id
+			     sender_id
 
 	*/
 
@@ -450,13 +455,13 @@ func writeToFile(ctx context.Context, dataCh <-chan string, done chan<- bool, fi
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
 
-        // write the header
-        if header != "" {
-	   _, err := writer.WriteString(header + "\n")
-	   if err != nil {
-		log.Printf("Write error: %v", err)
-	   }
-        }
+	// write the header
+	if header != "" {
+		_, err := writer.WriteString(header + "\n")
+		if err != nil {
+			log.Printf("Write error: %v", err)
+		}
+	}
 
 	// Process until channel is closed
 	for data := range dataCh {
