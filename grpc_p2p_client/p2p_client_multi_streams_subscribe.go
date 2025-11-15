@@ -68,6 +68,10 @@ func main() {
 	}
 	fmt.Printf("numip %d  index %d\n", len(_ips), *endIdx)
 	*endIdx = min(len(_ips), *endIdx)
+	if *startIdx < 0 || *startIdx >= *endIdx || *startIdx >= len(_ips) {
+		log.Fatalf("invalid index range: start-index=%d end-index=%d (num IPs=%d)", *startIdx, *endIdx, len(_ips))
+	}
+
 	ips := _ips[*startIdx:*endIdx]
 	fmt.Printf("Found %d IPs: %v\n", len(ips), ips)
 
