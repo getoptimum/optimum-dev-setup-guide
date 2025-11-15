@@ -90,27 +90,25 @@ func main() {
 	// Launch goroutines with synchronization
 	var wg sync.WaitGroup
 	if *outputData != "" {
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
+                        defer wg.Done()
                         header := fmt.Sprintf("receiver\tsender\tsize\tsha256(msg)") 
 			go writeToFile(ctx, dataCh, dataDone, *outputData, header)
 		}()
 	}
 
 	if *outputTrace != "" {
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
+                        defer wg.Done()
                         header := "" //fmt.Sprintf("sender\tsize\tsha256(msg)") 
 			go writeToFile(ctx, traceCh, traceDone, *outputTrace, header)
 		}()
 	}
 
 	for _, ip := range ips {
-		wg.Add(1)
+                wg.Add(1);
 		go func(ip string) {
-			defer wg.Done()
+                        defer wg.Done()
 			receiveMessages(ctx, ip, *outputData != "", dataCh, *outputTrace != "", traceCh)
 		}(ip)
 	}

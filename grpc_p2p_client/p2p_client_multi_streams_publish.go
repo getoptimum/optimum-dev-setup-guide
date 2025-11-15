@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
+	mathrand "math/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -47,6 +48,7 @@ var (
 
 	// optional: number of messages to publish (for stress testing or batch sending)
 	count    = flag.Int("count", 1, "number of messages to publish")
+	poisson    = flag.Bool("poisson", false, "Enable Poisson arrival")
 	dataSize = flag.Int("datasize", 100, "size of random of messages to publish")
 	// optional: sleep duration between publishes
 	sleep    = flag.Duration("sleep", 50*time.Millisecond, "optional delay between publishes (e.g., 1s, 500ms)")
@@ -85,15 +87,13 @@ func main() {
 	// Buffered channel to prevent blocking
 	dataCh := make(chan string, 100)
 	done := make(chan bool)
-        *dataSize = int(float32(*dataSize)/2.0)
+	*dataSize = int(float32(*dataSize) / 2.0)
 
 	var wg sync.WaitGroup
 	// Start writing the has of the published data
 	if *output != "" {
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
-                        header := fmt.Sprintf("sender\tsize\tsha256(msg)") 
+			header := fmt.Sprintf("sender\tsize\tsha256(msg)")
 			go writeHashToFile(dataCh, done, *output, header)
 		}()
 	}
@@ -123,28 +123,27 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 	}
 
 	for i := 0; i < *count; i++ {
-	conn, err := grpc.NewClient(ip,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(math.MaxInt),
-			grpc.MaxCallSendMsgSize(math.MaxInt),
-		),
-	)
-	if err != nil {
-		log.Fatalf("failed to connect to node %v", err)
-	}
-	//defer conn.Close()
-	println(fmt.Sprintf("Connected to node at: %s…", ip))
+		conn, err := grpc.NewClient(ip,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithDefaultCallOptions(
+				grpc.MaxCallRecvMsgSize(math.MaxInt),
+				grpc.MaxCallSendMsgSize(math.MaxInt),
+			),
+		)
+		if err != nil {
+			log.Fatalf("failed to connect to node %v", err)
+		}
+		//defer conn.Close()
+		println(fmt.Sprintf("Connected to node at: %s…", ip))
 
-	client := protobuf.NewCommandStreamClient(conn)
+		client := protobuf.NewCommandStreamClient(conn)
 
-	stream, err := client.ListenCommands(ctx)
+		stream, err := client.ListenCommands(ctx)
 
-	if err != nil {
-		log.Fatalf("ListenCommands: %v", err)
-	}
+		if err != nil {
+			log.Fatalf("ListenCommands: %v", err)
+		}
 
-	//for i := 0; i < *count; i++ {
 		start := time.Now()
 		var data []byte
 		//currentTime := time.Now().UnixNano()
@@ -177,10 +176,17 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		}
 		fmt.Printf("Published %s to %q (took %v)\n", dataToSend, *topic, elapsed)
 
-		if *sleep > 0 {
-			time.Sleep(*sleep)
-		}
-	 conn.Close()
+                if *poisson {
+                   lambda := 1.0 / (*sleep).Seconds()
+                   interval := mathrand.ExpFloat64() / lambda
+                   waitTime := time.Duration(interval * float64(time.Second))
+		   time.Sleep(waitTime)
+                } else {
+   		   time.Sleep(*sleep)
+
+                }
+                 
+		conn.Close()
 	}
 
 	return nil
@@ -250,13 +256,13 @@ func writeHashToFile(dataCh <-chan string, done chan<- bool, filename string, he
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
 
-        // write the header
-        if header != "" {
-	   _, err := writer.WriteString(header + "\n")
-	   if err != nil {
-		log.Printf("Write error: %v", err)
-	   }
-        }
+	// write the header
+	if header != "" {
+		_, err := writer.WriteString(header + "\n")
+		if err != nil {
+			log.Printf("Write error: %v", err)
+		}
+	}
 
 	// Process until channel is closed
 	for data := range dataCh {
