@@ -146,12 +146,12 @@ func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan
 			grpc.MaxCallSendMsgSize(math.MaxInt),
 		),
 	)
-	defer conn.Close()
 
-       fmt.Printf("IP -  %v\n", ip)
+        fmt.Printf("IP -  %v\n", ip)
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
 	}
+	defer conn.Close()
 
 	client := protobuf.NewCommandStreamClient(conn)
 
