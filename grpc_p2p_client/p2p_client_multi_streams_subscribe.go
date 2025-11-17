@@ -96,7 +96,6 @@ func main() {
 	if *outputData != "" {
 		dataDone = make(chan bool)
 		go func() {
-			defer wg.Done()
 			header := fmt.Sprintf("receiver\tsender\tsize\tsha256(msg)")
 			go writeToFile(ctx, dataCh, dataDone, *outputData, header)
 		}()
@@ -105,7 +104,6 @@ func main() {
 	if *outputTrace != "" {
 		traceDone = make(chan bool)
 		go func() {
-			defer wg.Done()
 			header := "" //fmt.Sprintf("sender\tsize\tsha256(msg)")
 			go writeToFile(ctx, traceCh, traceDone, *outputTrace, header)
 		}()
@@ -148,6 +146,8 @@ func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan
 			grpc.MaxCallSendMsgSize(math.MaxInt),
 		),
 	)
+
+        fmt.Printf("IP -  %v\n", ip)
 	if err != nil {
 		log.Fatalf("failed to connect to node %v", err)
 	}
@@ -156,7 +156,6 @@ func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan
 	client := protobuf.NewCommandStreamClient(conn)
 
 	stream, err := client.ListenCommands(ctx)
-
 	if err != nil {
 		log.Fatalf("ListenCommands: %v", err)
 	}
