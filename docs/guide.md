@@ -268,8 +268,8 @@ The `.env.example` file contains:
 ```bash
 BOOTSTRAP_PEER_ID=12D3KooWD5RtEPmMR9Yb2ku5VuxqK7Yj1Y5Gv8DmffJ6Ei8maU44
 CLUSTER_ID=docker-dev-cluster
-PROXY_VERSION=v0.0.1-rc13
-P2P_NODE_VERSION=v0.0.1-rc13
+PROXY_VERSION=v0.0.1-rc16
+P2P_NODE_VERSION=v0.0.1-rc16
 ```
 
 **Variables explained:**
@@ -572,7 +572,7 @@ curl http://localhost:8081/api/v1/version
 
 ```json
 {
-  "version": "v0.0.1-rc13",
+  "version": "v0.0.1-rc16",
   "commit_hash": "8f3057d"
 }
 ```
@@ -1081,7 +1081,7 @@ response:
 
 ```json
 {
-  "version": "v0.0.1-rc13",
+  "version": "v0.0.1-rc16",
   "commit_hash": "8f3057d"
 }
 ```
@@ -1155,7 +1155,7 @@ The client recognizes these OptimumP2P trace events (observed in practice):
 
 #### Implementation Details
 
-The trace parsing is implemented in `grpc_p2p_client/p2p_client.go`:
+The trace parsing is implemented in `grpc_p2p_client/shared/utils.go`:
 
 ```go
 func handleGossipSubTrace(data []byte) {

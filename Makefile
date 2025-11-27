@@ -14,7 +14,9 @@ SCRIPTS := ./script/generate-identity.sh ./script/proxy_client.sh ./test_suite.s
 .PHONY: $(P2P_CLIENT) $(PROXY_CLIENT) $(KEYGEN_BINARY) setup-scripts
 
 $(P2P_CLIENT):
-	@cd $(P2P_CLIENT_DIR) && go build -o p2p-client ./p2p_client.go
+	@cd $(P2P_CLIENT_DIR) && go build -o p2p-client ./cmd/single/
+	@cd $(P2P_CLIENT_DIR) && go build -o p2p-multi-publish ./cmd/multi-publish/
+	@cd $(P2P_CLIENT_DIR) && go build -o p2p-multi-subscribe ./cmd/multi-subscribe/
 
 $(PROXY_CLIENT):
 	@cd $(PROXY_CLIENT_DIR) && go build -o proxy-client ./proxy_client.go

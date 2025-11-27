@@ -1,3 +1,20 @@
 .env
 .idea/*
 identity
+
+# macOS
+.DS_Store
+
+
+# Build binaries
+grpc_p2p_client/p2p-client
+grpc_p2p_client/p2p-multi-publish
+grpc_p2p_client/p2p-multi-subscribe
+
+# Test files
+grpc_p2p_client/test-ips.txt
+grpc_p2p_client/remote-ips.txt
+
+# Output files
+*.txt
+!grpc_p2p_client/local.ips.tsv
