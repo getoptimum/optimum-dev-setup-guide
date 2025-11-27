@@ -1155,7 +1155,7 @@ The client recognizes these OptimumP2P trace events (observed in practice):
 
 #### Implementation Details
 
-The trace parsing is implemented in `grpc_p2p_client/p2p_client.go`:
+The trace parsing is implemented in `grpc_p2p_client/shared/utils.go`:
 
 ```go
 func handleGossipSubTrace(data []byte) {

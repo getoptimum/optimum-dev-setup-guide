@@ -32,11 +32,13 @@ jobs:
           cache: true
       - uses: actions/checkout@v4
       
-      - name: Build P2P Client
+      - name: Build P2P Clients
         run: |
           cd grpc_p2p_client
-          go build -o p2p-client ./p2p_client.go
-          echo "P2P client built successfully"
+          go build -o p2p-client ./cmd/single/
+          go build -o p2p-multi-publish ./cmd/multi-publish/
+          go build -o p2p-multi-subscribe ./cmd/multi-subscribe/
+          echo "All P2P clients built successfully"
       
       - name: Build Proxy Client
         run: |
@@ -218,27 +220,3 @@ jobs:
           cd ../grpc_proxy_client && go mod verify
           cd ../keygen && go mod verify
           echo "All Go modules are valid"
-
-  # This job ensures all checks pass - useful for branch protection rules
-  ci-success:
-    name: CI Success
-    runs-on: ubuntu-latest
-    needs: [test-go-clients, golangci, test-docker-setup, test-scripts, validate-config]
-    if: always()
-    steps:
-      - name: Check all jobs succeeded
-        run: |
-          if [[ "${{ needs.test-go-clients.result }}" != "success" || 
-                "${{ needs.golangci.result }}" != "success" || 
-                "${{ needs.test-docker-setup.result }}" != "success" || 
-                "${{ needs.test-scripts.result }}" != "success" || 
-                "${{ needs.validate-config.result }}" != "success" ]]; then
-            echo "CI failed:"
-            echo "  - Go Clients: ${{ needs.test-go-clients.result }}"
-            echo "  - Lint: ${{ needs.golangci.result }}"
-            echo "  - Docker Setup: ${{ needs.test-docker-setup.result }}"
-            echo "  - Scripts: ${{ needs.test-scripts.result }}"
-            echo "  - Config: ${{ needs.validate-config.result }}"
-            exit 1
-          fi
-          echo "All CI checks passed successfully!"

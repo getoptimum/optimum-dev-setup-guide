@@ -130,9 +130,13 @@ optimum-dev-setup-guide/
 │   ├── guide.md           # Complete setup guide
 │   └── intro.png          # Architecture diagram
 ├── grpc_p2p_client/       # P2P client implementation
-│   ├── grpc/              # Generated gRPC files
-│   ├── proto/             # Protocol definitions
-│   └── p2p_client.go      # Main P2P client
+│   ├── cmd/                # Client binaries
+│   │   ├── single/         # Single node client
+│   │   ├── multi-publish/  # Multi-node publisher
+│   │   └── multi-subscribe/ # Multi-node subscriber
+│   ├── shared/             # Shared types and utilities
+│   ├── grpc/               # Generated gRPC files
+│   └── proto/              # Protocol definitions
 ├── grpc_proxy_client/     # Proxy client implementation
 │   ├── grpc/              # Generated gRPC files
 │   ├── proto/             # Protocol definitions
