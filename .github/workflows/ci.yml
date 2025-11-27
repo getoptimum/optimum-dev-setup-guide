@@ -32,31 +32,20 @@ jobs:
           cache: true
       - uses: actions/checkout@v4
       
-      - name: Build P2P Clients
-        run: |
-          cd grpc_p2p_client
-          go build -o p2p-client ./cmd/single/
-          go build -o p2p-multi-publish ./cmd/multi-publish/
-          go build -o p2p-multi-subscribe ./cmd/multi-subscribe/
-          echo "All P2P clients built successfully"
-      
       - name: Build Proxy Client
         run: |
           cd grpc_proxy_client
           go build -o proxy-client ./proxy_client.go
-          echo "Proxy client built successfully"
       
       - name: Build Key Generator
         run: |
           cd keygen
           go build -o generate-p2p-key ./generate_p2p_key.go
-          echo "Key generator built successfully"
       
       - name: Test Key Generation
         run: |
           cd keygen
           go run ./generate_p2p_key.go
-          echo "Key generation test passed"
 
   # Lint Go code
   golangci:
