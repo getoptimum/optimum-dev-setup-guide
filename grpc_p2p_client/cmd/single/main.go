@@ -65,7 +65,6 @@ func main() {
 		<-c
 		fmt.Println("\nshutting down…")
 		cancel()
-		os.Exit(0)
 	}()
 
 	switch *mode {

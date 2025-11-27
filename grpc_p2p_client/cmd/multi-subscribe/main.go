@@ -68,7 +68,7 @@ func main() {
 	if *outputData != "" {
 		dataDone = make(chan bool)
 		go func() {
-			header := fmt.Sprintf("receiver\tsender\tsize\tsha256(msg)")
+			header := "receiver\tsender\tsize\tsha256(msg)"
 			go shared.WriteToFile(ctx, dataCh, dataDone, *outputData, header)
 		}()
 	}
@@ -120,14 +120,16 @@ func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan
 
 	fmt.Printf("IP -  %v\n", ip)
 	if err != nil {
-		log.Fatalf("failed to connect to node %v", err)
+		log.Printf("[%s] failed to connect to node: %v", ip, err)
+		return fmt.Errorf("failed to connect to node %s: %w", ip, err)
 	}
 	defer conn.Close()
 
 	client := protobuf.NewCommandStreamClient(conn)
 	stream, err := client.ListenCommands(ctx)
 	if err != nil {
-		log.Fatalf("ListenCommands: %v", err)
+		log.Printf("[%s] ListenCommands failed: %v", ip, err)
+		return fmt.Errorf("ListenCommands failed for %s: %w", ip, err)
 	}
 
 	println(fmt.Sprintf("Connected to node at: %s…", ip))
@@ -137,7 +139,8 @@ func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan
 		Topic:   *topic,
 	}
 	if err := stream.Send(subReq); err != nil {
-		log.Fatalf("send subscribe: %v", err)
+		log.Printf("[%s] send subscribe failed: %v", ip, err)
+		return fmt.Errorf("send subscribe failed for %s: %w", ip, err)
 	}
 	fmt.Printf("Subscribed to topic %q, waiting for messages…\n", *topic)
 

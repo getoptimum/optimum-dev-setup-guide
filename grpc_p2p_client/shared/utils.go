@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	protobuf "p2p_client/grpc"
 	optsub "p2p_client/grpc/mump2p_trace"
@@ -63,7 +64,7 @@ func HandleResponse(resp *protobuf.Response, counter *int32) {
 		}
 		n := atomic.AddInt32(counter, 1)
 		messageSize := len(p2pMessage.Message)
-		currentTime := atomic.LoadInt64(&timeNow)
+		currentTime := time.Now().UnixNano()
 		fmt.Printf("Recv message: [%d] [%d %d] %s\n\n", n, currentTime, messageSize, string(p2pMessage.Message))
 	case protobuf.ResponseType_MessageTraceGossipSub:
 		log.Printf("GossipSub trace received but handler not implemented")
@@ -74,8 +75,6 @@ func HandleResponse(resp *protobuf.Response, counter *int32) {
 		log.Println("Unknown response command:", resp.GetCommand())
 	}
 }
-
-var timeNow int64
 
 func HandleResponseWithTracking(ip string, resp *protobuf.Response, counter *int32,
 	writeData bool, dataCh chan<- string, writeTrace bool, traceCh chan<- string) {
