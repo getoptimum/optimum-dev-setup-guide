@@ -1,4 +1,4 @@
-# OptimumP2P – Local Development Setup
+# mump2p – Local Development Setup
 
 ## **IMPORTANT: Remote P2P Nodes for Distributed Testing**
 
@@ -9,9 +9,11 @@
 For connecting to external P2P nodes or remote clusters, use the standard sidecar port `33212`:
 
 ```bash
-# Connect to external P2P nodes
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=node1.example.com:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=node2.example.com:33212
+# Subscribe to a topic on a remote node
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=34.124.246.10:33212
+
+# Publish messages to a remote node
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=34.40.169.185:33212
 ```
 
 **Port Usage Summary:**
@@ -21,8 +23,8 @@ For connecting to external P2P nodes or remote clusters, use the standard sideca
 
 ---
 
-This repository provides a full-stack setup for running OptimumP2P, a high-performance RLNC-enhanced pubsub protocol, along with multiple proxies for scalable message routing.
-This repository provides a sample Docker Compose setup for deploying the OptimumP2P messaging infrastructure locally.
+This repository provides a full-stack setup for running mump2p, a high-performance RLNC-enhanced pubsub protocol, along with multiple proxies for scalable message routing.
+This repository provides a sample Docker Compose setup for deploying the mump2p messaging infrastructure locally.
 It demonstrates how partners can configure proxies and P2P nodes, and serves as a reference architecture for integration, testing, and scaling into production.
 
 ## Architecture
@@ -47,13 +49,13 @@ This setup is not production-ready but is designed to:
 
 - Show how to run multiple P2P nodes and proxies
 - Demonstrate typical configuration options
-- Help partners bootstrap their own network using OptimumP2P
+- Help partners bootstrap their own network using mump2p
 
 **You are expected to modify this template based on your environment, infrastructure, and security needs.**
 
 ## What It Includes
 
-- 4 P2P Nodes running the OptimumP2P
+- 4 P2P Nodes running the mump2p
 - 2 Proxies for client-facing APIs (HTTP/WebSocket)
 - Static IP overlay (optimum-network) for deterministic internal addressing
 - .env-based dynamic peer identity setup
@@ -94,6 +96,8 @@ make publish 127.0.0.1:33221 testtopic random 10 1s
 
 ### Direct Binary Usage (Recommended)
 
+**Single-Node Client:**
+
 ```sh
 # Subscribe to a topic (in one terminal)
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=testtopic --addr=127.0.0.1:33221
@@ -104,6 +108,18 @@ make publish 127.0.0.1:33221 testtopic random 10 1s
 # Publish multiple messages with delay
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg="Random Message" --addr=127.0.0.1:33222 -count=5 -sleep=1s
 ```
+
+**Multi-Node Clients (for stress testing):**
+
+```sh
+# Publish to multiple nodes simultaneously
+./grpc_p2p_client/p2p-multi-publish -topic=testtopic -ipfile=ips.txt -count=10 -sleep=500ms
+
+# Subscribe to multiple nodes and collect data
+./grpc_p2p_client/p2p-multi-subscribe -topic=testtopic -ipfile=ips.txt -output-data=data.tsv
+```
+
+See the [Complete Setup Guide](./docs/guide.md#multi-node-client-tools) for detailed multi-node client usage.
 
 **Example Output:**
 
@@ -152,7 +168,7 @@ optimum-dev-setup-guide/
 │   ├── generate-identity.sh # Bootstrap identity generation
 │   └── proxy_client.sh     # Proxy client wrapper
 ├── Makefile               # Build shortcuts and usage examples
-├── docker-compose-optimum.yml   # OptimumP2P service orchestration
+├── docker-compose-optimum.yml   # mump2p service orchestration
 ├── docker-compose-gossipsub.yml # GossipSub service orchestration
 ├── .env.example           # Environment variables template
 ├── test_suite.sh          # API validation tests
@@ -186,7 +202,7 @@ make generate-identity
 cp .env.example .env
 # Replace BOOTSTRAP_PEER_ID in .env with your generated peer ID
 
-# 3. Start all services (OptimumP2P)
+# 3. Start all services (mump2p)
 docker-compose -f docker-compose-optimum.yml up --build -d
 
 # 4. Test the setup
@@ -268,17 +284,23 @@ Published "[1757588485852133000 60] P2P message 1 - 3cc8f3fb" to "testtopic" (to
 #### P2P Client Commands
 
 ```sh
-# Build the P2P client
+# Build all P2P clients (single, multi-publish, multi-subscribe)
 make build
 
-# Subscribe to a topic
+# Single-node client - Subscribe to a topic
 ./grpc_p2p_client/p2p-client -mode=subscribe -topic=testtopic --addr=127.0.0.1:33221
 
-# Publish a single message
+# Single-node client - Publish a single message
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg=HelloWorld --addr=127.0.0.1:33222
 
-# Publish multiple random messages with delay
+# Single-node client - Publish multiple random messages with delay
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg="Random Message" --addr=127.0.0.1:33222 -count=5 -sleep=1s
+
+# Multi-node publisher - Publish to multiple nodes
+./grpc_p2p_client/p2p-multi-publish -topic=testtopic -ipfile=ips.txt -count=10 -sleep=500ms
+
+# Multi-node subscriber - Subscribe to multiple nodes
+./grpc_p2p_client/p2p-multi-subscribe -topic=testtopic -ipfile=ips.txt -output-data=data.tsv
 ```
 
 #### Command Options

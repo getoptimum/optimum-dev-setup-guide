@@ -84,4 +84,4 @@ echo
 print_status "To use in docker-compose:"
 echo "export BOOTSTRAP_PEER_ID=$PEER_ID"
 echo
-print_success "Done! Your OptimumP2P peer ID: $PEER_ID"
+print_success "Done! Your mump2p peer ID: $PEER_ID"

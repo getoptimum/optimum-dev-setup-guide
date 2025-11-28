@@ -157,7 +157,7 @@ func HandleGossipSubTrace(data []byte, writeTrace bool, traceCh chan<- string) {
 func HandleOptimumP2PTrace(data []byte, writeTrace bool, traceCh chan<- string) {
 	evt := &optsub.TraceEvent{}
 	if err := proto.Unmarshal(data, evt); err != nil {
-		fmt.Printf("[TRACE] OptimumP2P decode error: %v\n", err)
+		fmt.Printf("[TRACE] mump2p decode error: %v\n", err)
 		return
 	}
 
