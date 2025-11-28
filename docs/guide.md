@@ -1,4 +1,4 @@
-# OptimumP2P Development Setup - Complete Guide
+# mump2p Development Setup - Complete Guide
 
 ## **IMPORTANT: Remote P2P Clusters for Distributed Testing**
 
@@ -6,12 +6,14 @@
 
 ### **Connecting to Remote Clusters**
 
-OptimumP2P supports connecting to remote P2P clusters for distributed testing and production use:
+mump2p supports connecting to remote P2P clusters for distributed testing and production use:
 
 ```bash
-# Connect to remote cluster nodes
-./grpc_p2p_client/p2p-client -mode=subscribe -topic=distributed-topic --addr=remote-node-1:33212
-./grpc_p2p_client/p2p-client -mode=publish -topic=distributed-topic -msg="Hello World" --addr=remote-node-2:33212
+# Subscribe to a topic on a remote node
+./grpc_p2p_client/p2p-client -mode=subscribe -topic=mytopic --addr=34.124.246.10:33212
+
+# Publish messages to a remote node
+./grpc_p2p_client/p2p-client -mode=publish -topic=mytopic -msg="Hello World" --addr=34.40.169.185:33212
 ```
 
 **Key Points:**
@@ -22,36 +24,32 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
 
 ---
 
-*Complete guide for setting up and using the OptimumP2P development environment.*
+*Complete guide for setting up and using the mump2p development environment.*
 
 ## Table of Contents
 
-- [OptimumP2P Development Setup - Complete Guide](#optimump2p-development-setup---complete-guide)
-  - [**IMPORTANT: Remote P2P Clusters for Distributed Testing**](#important-remote-p2p-clusters-for-distributed-testing)
-    - [**Connecting to Remote Clusters**](#connecting-to-remote-clusters)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-  - [Getting Started](#getting-started)
-    - [1. Generate Bootstrap Identity](#1-generate-bootstrap-identity)
-    - [2. Configure Environment](#2-configure-environment)
-    - [3. Start Services](#3-start-services)
-    - [4. Test Everything](#4-test-everything)
-  - [Build and Development Commands](#build-and-development-commands)
-    - [Makefile Commands](#makefile-commands)
-    - [Direct Binary Usage](#direct-binary-usage)
-  - [Configuration](#configuration)
-    - [Environment Variables (.env)](#environment-variables-env)
-    - [P2P Node Variables](#p2p-node-variables)
-    - [One-Command Setup (Alternative)](#one-command-setup-alternative)
-  - [Two Ways to Connect](#two-ways-to-connect)
-  - [Setup and Installation](#setup-and-installation)
-    - [1. Bootstrap Identity Generation](#1-bootstrap-identity-generation)
-    - [2. Service Startup](#2-service-startup)
-    - [3. Verification](#3-verification)
-  - [Monitoring](#monitoring)
-    - [Geographic Network Analysis](#geographic-network-analysis)
-  - [Troubleshooting](#troubleshooting)
-  - [API Reference](#api-reference)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+  - [1. Generate Bootstrap Identity](#1-generate-bootstrap-identity)
+  - [2. Configure Environment](#2-configure-environment)
+  - [3. Start Services](#3-start-services)
+  - [4. Test Everything](#4-test-everything)
+- [Build and Development Commands](#build-and-development-commands)
+  - [Makefile Commands](#makefile-commands)
+  - [Direct Binary Usage](#direct-binary-usage)
+- [Configuration](#configuration)
+  - [Environment Variables (.env)](#environment-variables-env)
+  - [P2P Node Variables](#p2p-node-variables)
+  - [One-Command Setup (Alternative)](#one-command-setup-alternative)
+- [Two Ways to Connect](#two-ways-to-connect)
+- [Setup and Installation](#setup-and-installation)
+  - [1. Bootstrap Identity Generation](#1-bootstrap-identity-generation)
+  - [2. Service Startup](#2-service-startup)
+  - [3. Verification](#3-verification)
+- [Monitoring](#monitoring)
+  - [Geographic Network Analysis](#geographic-network-analysis)
+- [Troubleshooting](#troubleshooting)
+- [API Reference](#api-reference)
     - [Proxy API](#proxy-api)
       - [Subscribe to Topic](#subscribe-to-topic)
       - [WebSocket Connection](#websocket-connection)
@@ -75,7 +73,7 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
     - [gRPC API](#grpc-api)
       - [Service Definition](#service-definition)
       - [Authentication](#authentication)
-  - [Client Tools](#client-tools)
+- [Client Tools](#client-tools)
     - [gRPC Proxy Client Implementation](#grpc-proxy-client-implementation)
       - [Features](#features)
       - [Usage](#usage)
@@ -91,6 +89,11 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
       - [Basic Publishing](#basic-publishing)
       - [Bulk Random Message Publishing](#bulk-random-message-publishing)
       - [Available Flags](#available-flags)
+    - [Multi-Node Client Tools](#multi-node-client-tools)
+      - [Available Multi-Node Clients](#available-multi-node-clients)
+      - [Multi-Node Publisher Usage](#multi-node-publisher-usage)
+      - [Multi-Node Subscriber Usage](#multi-node-subscriber-usage)
+      - [When to Use Each Client](#when-to-use-each-client)
     - [Inspecting P2P Nodes](#inspecting-p2p-nodes)
       - [Get Node Health](#get-node-health)
       - [Get Node State](#get-node-state)
@@ -99,19 +102,17 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
     - [Collecting Trace Data for Experiments](#collecting-trace-data-for-experiments)
       - [How Trace Collection Works](#how-trace-collection-works)
       - [Usage Example](#usage-example)
-      - [OptimumP2P Trace Event Types](#optimump2p-trace-event-types)
+      - [mump2p Trace Event Types](#optimump2p-trace-event-types)
       - [Implementation Details](#implementation-details)
   - [Advanced Configuration](#advanced-configuration)
     - [Authentication Setup (Optional)](#authentication-setup-optional)
     - [Rate Limiting](#rate-limiting)
     - [P2P Node Configuration](#p2p-node-configuration)
     - [Proxy Configuration](#proxy-configuration)
-  - [Monitoring and Telemetry](#monitoring-and-telemetry)
-    - [Prometheus Metrics](#prometheus-metrics)
-      - [Key Metrics](#key-metrics)
-      - [Example Queries](#example-queries)
-    - [Trace Collection](#trace-collection)
-  - [Troubleshooting](#troubleshooting-1)
+- [Monitoring and Telemetry](#monitoring-and-telemetry)
+  - [Prometheus Metrics](#prometheus-metrics)
+  - [Trace Collection](#trace-collection)
+- [Troubleshooting](#troubleshooting-1)
     - [Common Issues](#common-issues)
       - [Services Not Starting](#services-not-starting)
       - [API Endpoints Not Responding](#api-endpoints-not-responding)
@@ -122,14 +123,7 @@ OptimumP2P supports connecting to remote P2P clusters for distributed testing an
       - [Low Latency Requirements](#low-latency-requirements)
     - [Log Analysis](#log-analysis)
     - [Debugging Message Delivery](#debugging-message-delivery)
-- [Proxy logs](#proxy-logs)
-- [P2P node logs](#p2p-node-logs)
-- [All services](#all-services)
-  - [Production Considerations](#production-considerations)
-    - [Security](#security)
-    - [Scalability](#scalability)
-    - [Monitoring](#monitoring-1)
-  - [Developer Tools](#developer-tools)
+- [Developer Tools](#developer-tools)
     - [CLI Integration](#cli-integration)
     - [API Clients](#api-clients)
 
@@ -215,6 +209,8 @@ make clean
 
 After building with `make build`, you can use the binaries directly:
 
+**Single-Node Client (`p2p-client`):**
+
 ```sh
 # P2P Client Help
 ./grpc_p2p_client/p2p-client --help
@@ -228,6 +224,18 @@ After building with `make build`, you can use the binaries directly:
 # Publish multiple messages with delay
 ./grpc_p2p_client/p2p-client -mode=publish -topic=testtopic -msg="Random Message" --addr=127.0.0.1:33222 -count=5 -sleep=1s
 ```
+
+**Multi-Node Clients:**
+
+```sh
+# Multi-node publisher (publish to multiple nodes)
+./grpc_p2p_client/p2p-multi-publish -topic=testtopic -ipfile=ips.txt -count=10 -sleep=500ms
+
+# Multi-node subscriber (subscribe to multiple nodes)
+./grpc_p2p_client/p2p-multi-subscribe -topic=testtopic -ipfile=ips.txt -output-data=data.tsv -output-trace=trace.tsv
+```
+
+See the [Multi-Node Client Tools](#multi-node-client-tools) section for detailed usage.
 
 **Example Output:**
 
@@ -292,7 +300,7 @@ The docker-compose files use these version variables:
 - `API_PORT`: HTTP port exposing internal node APIs (default: `9090`)
 - `IDENTITY_DIR`: Directory containing node identity (p2p.key) (needed only for bootstrap node; each node generates its own on start)
 - `BOOTSTRAP_PEERS`: Comma-separated list of peer multiaddrs with /p2p/ ID for initial connection
-- `OPTIMUM_PORT`: Port used by the OptimumP2P (default: 7070)
+- `OPTIMUM_PORT`: Port used by the mump2p (default: 7070)
 - `OPTIMUM_MAX_MSG_SIZE`: Max message size in bytes (default: `1048576` → 1MB)
 - `OPTIMUM_MESH_MIN`: Min number of mesh-connected peers (default: `3`)
 - `OPTIMUM_MESH_MAX`: Max number of mesh-connected peers (default: `12`)
@@ -377,7 +385,7 @@ The setup includes Grafana dashboards for visualizing P2P node and proxy metrics
 **Available Dashboards:**
 
 - **Optimum Proxy Dashboard**: Proxy uptime, cluster health, CPU/memory usage, goroutines
-- **OptimumP2P Nodes Dashboard**: P2P node system state, CPU usage, RAM utilization
+- **mump2p Nodes Dashboard**: P2P node system state, CPU usage, RAM utilization
 
 **Prometheus:**
 
@@ -413,7 +421,7 @@ If you encounter issues during setup, here are common problems and solutions:
 **"checksum mismatch" errors:**
 
 - Delete the `identity/` directory and regenerate using `./script/generate-identity.sh`
-- The identity file must have the proper checksum format expected by OptimumP2P nodes
+- The identity file must have the proper checksum format expected by mump2p nodes
 
 **Nodes not connecting to bootstrap:**
 
@@ -843,7 +851,7 @@ go build -o proxy_client proxy_client.go
 - `-count`: Number of messages to publish (default: 5)
 - `-delay`: Delay between message publishing (default: 2s)
 - `-proxy`: Proxy server address (default: "localhost:33211")
-- `-rest`: REST API base URL (default: "<http://localhost:8081>")
+- `-rest`: REST API base URL (default: "http://localhost:8081")
 
 #### Protocol Flow
 
@@ -915,7 +923,7 @@ This is useful for:
 
 > **Note:** External nodes use the standard sidecar port `33212` directly.
 
-response
+**Example response:**
 
 ```sh
 Subscribed to topic "mytopic", waiting for messages…
@@ -975,7 +983,7 @@ meOKYWvJ37ossi5bbMGAg5TgsB0aP61x/Oi
 
 > **Note:** External nodes use the standard sidecar port `33212` directly.
 
-response
+**Example response:**
 
 ```sh
 Published "[1757588485852133000 26] random" to "mytopic" (took 72.042µs)
@@ -1025,6 +1033,138 @@ done
 
 - `-count`: Number of messages to publish (default: 1)
 - `-sleep`: Delay between publishes (e.g., 100ms, 1s)
+
+### Multi-Node Client Tools
+
+For testing and stress testing across multiple P2P nodes simultaneously, the project provides specialized multi-node clients:
+
+#### Available Multi-Node Clients
+
+1. **`p2p-client`** (single-node client) - From `cmd/single/`
+   - Connect to one P2P node at a time
+   - Best for: Simple testing, development, single-node operations
+   - Supports both subscribe and publish modes
+
+2. **`p2p-multi-publish`** - From `cmd/multi-publish/`
+   - Publishes messages to multiple nodes concurrently
+   - Best for: Stress testing, load generation, distributed publishing
+   - Reads IP addresses from a file
+
+3. **`p2p-multi-subscribe`** - From `cmd/multi-subscribe/`
+   - Subscribes to multiple nodes concurrently
+   - Best for: Monitoring multiple nodes, collecting trace data, distributed subscription testing
+   - Supports output files for data and trace collection
+
+#### Multi-Node Publisher Usage
+
+Publish messages to multiple nodes simultaneously:
+
+Create a text file (`ips.txt`) with IP addresses, one per line:
+
+```
+localhost:33221
+localhost:33222
+localhost:33223
+localhost:33224
+```
+
+Then publish to all nodes in the file:
+
+```sh
+./grpc_p2p_client/p2p-multi-publish -topic=test-topic -ipfile=ips.txt -count=10 -sleep=500ms
+```
+
+**Flags:**
+- `-topic`: Topic name to publish to (required)
+- `-ipfile`: File containing IP addresses, one per line (required)
+- `-count`: Number of messages to publish per node (default: 1)
+- `-sleep`: Delay between messages (e.g., `500ms`, `1s`)
+
+**Example Output:**
+```
+Found 4 IPs: [localhost:33221 localhost:33222 localhost:33223 localhost:33224]
+Connected to node at: localhost:33221…
+Connected to node at: localhost:33222…
+Connected to node at: localhost:33223…
+Connected to node at: localhost:33224…
+Published data size 116
+Published to "test-topic" (took 263.709µs)
+...
+```
+
+#### Multi-Node Subscriber Usage
+
+Subscribe to multiple nodes and collect messages:
+
+```sh
+# Subscribe to all nodes in the file
+./grpc_p2p_client/p2p-multi-subscribe -topic=test-topic -ipfile=ips.txt
+
+# With output files for data analysis
+./grpc_p2p_client/p2p-multi-subscribe \
+  -topic=test-topic \
+  -ipfile=ips.txt \
+  -output-data=received_data.tsv \
+  -output-trace=trace_data.tsv
+```
+
+**Flags:**
+- `-topic`: Topic name to subscribe to (required)
+- `-ipfile`: File containing IP addresses, one per line (required)
+- `-start-index`: Starting index in IP file (default: 0)
+- `-end-index`: Ending index in IP file (default: 10000)
+- `-output-data`: Output file for message data (TSV format: receiver, sender, size, sha256)
+- `-output-trace`: Output file for trace events (TSV format: type, peerID, receivedFrom, messageID, topic, timestamp)
+
+**Example Output:**
+```
+numip 4  index 10000
+Found 4 IPs: [localhost:33221 localhost:33222 localhost:33223 localhost:33224]
+IP - localhost:33221
+IP - localhost:33222
+Connected to node at: localhost:33221…
+Trying to subscribe to topic test-topic…
+Subscribed to topic "test-topic", waiting for messages…
+Connected to node at: localhost:33222…
+Trying to subscribe to topic test-topic…
+Subscribed to topic "test-topic", waiting for messages…
+...
+```
+
+**Output File Formats:**
+
+**Data Output (`-output-data`):**
+```
+receiver	sender	size	sha256(msg)
+localhost:33221	node1	116	abc123def456...
+localhost:33222	node1	116	abc123def456...
+```
+
+**Trace Output (`-output-trace`):**
+```
+PUBLISH_MESSAGE	12D3KooW...		z4aVidFb...	test-topic	1764229885872324880
+DELIVER_MESSAGE	12D3KooW...	12D3KooW...	z4aVidFb...	test-topic	1764229885872574964
+```
+
+#### When to Use Each Client
+
+**Use `p2p-client` (single-node) when:**
+- Testing basic functionality
+- Developing or debugging
+- Simple publish/subscribe operations
+- Working with a single node
+
+**Use `p2p-multi-publish` when:**
+- Stress testing the network
+- Generating load across multiple nodes
+- Testing message propagation
+- Distributed publishing scenarios
+
+**Use `p2p-multi-subscribe` when:**
+- Monitoring multiple nodes simultaneously
+- Collecting trace data for analysis
+- Testing message delivery across nodes
+- Performance benchmarking
 
 ### Inspecting P2P Nodes
 
@@ -1096,14 +1236,14 @@ Returns the same geolocation metadata but aggregated across all nodes that the p
 
 ### Collecting Trace Data for Experiments
 
-The gRPC P2P client includes built-in trace collection functionality that automatically parses and displays trace events from both GossipSub and OptimumP2P protocols. This helps monitor message delivery performance and understand RLNC-enhanced shard behavior.
+The gRPC P2P client includes built-in trace collection functionality that automatically parses and displays trace events from both GossipSub and mump2p protocols. This helps monitor message delivery performance and understand RLNC-enhanced shard behavior.
 
 #### How Trace Collection Works
 
 When you subscribe to a topic, the client automatically receives and parses trace events:
 
 - **GossipSub traces**: Traditional pubsub delivery events with structured JSON output
-- **OptimumP2P traces**: RLNC-enhanced shard delivery events with detailed shard information
+- **mump2p traces**: RLNC-enhanced shard delivery events with detailed shard information
 
 #### Usage Example
 
@@ -1116,20 +1256,20 @@ You'll see structured trace output like:
 
 ```
 Subscribed to topic "your-topic", waiting for messages…
-[TRACE] OptimumP2P type=JOIN ts=2025-09-11T15:58:04.746971127+05:30 size=66B
-[TRACE] OptimumP2P JSON (136B): {"type":9,"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","timestamp":1757586484746971127,"join":{"topic":"trace-test"}}
-[TRACE] OptimumP2P type=SEND_RPC ts=2025-09-11T15:58:04.73762546+05:30 size=114B
-[TRACE] OptimumP2P JSON (260B): {"type":7,"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","timestamp":1757586484746035127,"sendRPC":{"sendTo":"ACQIARIg46ViPpa30cOyFCgRdiW+TS/qpMkuXQsKK0w+5svzqk8=","meta":{"subscription":[{"subscribe":true,"topic":"trace-test"}]},"length":16}}
-[TRACE] OptimumP2P type=GRAFT ts=2025-09-11T15:58:28.517443638+05:30 size=106B
-[TRACE] OptimumP2P JSON (202B): {"type":11,"peerID":"ACQIARIg46ViPpa30cOyFCgRdiW+TS/qpMkuXQsKK0w+5svzqk8=","timestamp":1757586508517443638,"graft":{"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","topic":"trace-test"}}
+[TRACE] mump2p type=JOIN ts=2025-09-11T15:58:04.746971127+05:30 size=66B
+[TRACE] mump2p JSON (136B): {"type":9,"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","timestamp":1757586484746971127,"join":{"topic":"trace-test"}}
+[TRACE] mump2p type=SEND_RPC ts=2025-09-11T15:58:04.73762546+05:30 size=114B
+[TRACE] mump2p JSON (260B): {"type":7,"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","timestamp":1757586484746035127,"sendRPC":{"sendTo":"ACQIARIg46ViPpa30cOyFCgRdiW+TS/qpMkuXQsKK0w+5svzqk8=","meta":{"subscription":[{"subscribe":true,"topic":"trace-test"}]},"length":16}}
+[TRACE] mump2p type=GRAFT ts=2025-09-11T15:58:28.517443638+05:30 size=106B
+[TRACE] mump2p JSON (202B): {"type":11,"peerID":"ACQIARIg46ViPpa30cOyFCgRdiW+TS/qpMkuXQsKK0w+5svzqk8=","timestamp":1757586508517443638,"graft":{"peerID":"ACQIARIgJUuLFt9bycr0mdXiMdJ1bQ8Nuxs2Y8NtQwPrXEVCuKM=","topic":"trace-test"}}
 [1] Received message: "Hello World"
 ```
 
 **Note:** Trace events are primarily available when connecting to local Docker P2P nodes. Initial connection generates JOIN, SEND_RPC, and GRAFT events. During message flow, you'll see rich RLNC shard events (NEW_SHARD, RECV_RPC, UNNECESSARY_SHARD) that show the protocol's coding behavior. Remote nodes may not generate trace events.
 
-#### OptimumP2P Trace Event Types
+#### mump2p Trace Event Types
 
-The client recognizes these OptimumP2P trace events (observed in practice):
+The client recognizes these mump2p trace events (observed in practice):
 
 **Common Events:**
 
@@ -1158,43 +1298,30 @@ The client recognizes these OptimumP2P trace events (observed in practice):
 The trace parsing is implemented in `grpc_p2p_client/shared/utils.go`:
 
 ```go
-func handleGossipSubTrace(data []byte) {
+func HandleGossipSubTrace(data []byte, writeTrace bool, traceCh chan<- string) {
     evt := &pubsubpb.TraceEvent{}
     if err := proto.Unmarshal(data, evt); err != nil {
-        fmt.Printf("[TRACE] GossipSub decode error: %v\n", err)
+        fmt.Printf("[TRACE] GossipSub decode error: %v raw=%dB head=%s\n",
+            err, len(data), HeadHex(data, 64))
         return
     }
-    ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
-    fmt.Printf("[TRACE] GossipSub type=%s ts=%s size=%dB\n", evt.GetType().String(), ts, len(data))
-    jb, _ := json.Marshal(evt)
-    fmt.Printf("[TRACE] GossipSub JSON (%dB): %s\n", len(jb), string(jb))
+    // Parses and formats trace events, optionally writing to traceCh channel
+    // ...
 }
 
-func handleOptimumP2PTrace(data []byte) {
+func HandleOptimumP2PTrace(data []byte, writeTrace bool, traceCh chan<- string) {
     evt := &optsub.TraceEvent{}
     if err := proto.Unmarshal(data, evt); err != nil {
-        fmt.Printf("[TRACE] OptimumP2P decode error: %v\n", err)
+        fmt.Printf("[TRACE] mump2p decode error: %v\n", err)
         return
     }
-    ts := time.Unix(0, evt.GetTimestamp()).Format(time.RFC3339Nano)
-    typeStr := optsub.TraceEvent_Type_name[int32(evt.GetType())]
-    fmt.Printf("[TRACE] OptimumP2P type=%s ts=%s size=%dB\n", typeStr, ts, len(data))
-    
-    // Display shard-specific details
-    switch evt.GetType() {
-    case optsub.TraceEvent_NEW_SHARD:
-        fmt.Printf("  NEW_SHARD id=%x coeff=%x\n", evt.GetNewShard().GetMessageID(), evt.GetNewShard().GetCoefficients())
-    case optsub.TraceEvent_DUPLICATE_SHARD:
-        fmt.Printf("  DUPLICATE_SHARD id=%x\n", evt.GetDuplicateShard().GetMessageID())
-    // ... other shard types
-    }
-    
-    jb, _ := json.Marshal(evt)
-    fmt.Printf("[TRACE] OptimumP2P JSON (%dB): %s\n", len(jb), string(jb))
+    // Parses mump2p trace events including shard information
+    // Supports writing to traceCh channel for file output
+    // ...
 }
 ```
 
-This provides both human-readable summaries and complete JSON data for detailed analysis.
+These functions are used by the multi-subscribe client to parse and optionally write trace events to output files. The trace data includes message delivery events, shard information, and peer connection details.
 
 ## Advanced Configuration
 
@@ -1257,38 +1384,6 @@ Access metrics at `/metrics` endpoint:
 curl http://localhost:8081/metrics
 ```
 
-#### Key Metrics
-
-**Publish Metrics:**
-
-- `published_messages_by_client_total`: Messages published per client/topic
-- `published_message_size_bytes`: Message size histogram  
-- `publish_error_total`: Publish errors by type
-
-**Connection Metrics:**
-
-- `total_p2pnodes_connections`: Active P2P connections
-- `active_ws_clients`: WebSocket client count
-
-**Delivery Metrics:**
-
-- `message_fallback_deliveries_total`: Messages delivered below threshold
-- `node_received_messages_total`: Messages per P2P node
-
-#### Example Queries
-
-Monitor publish rate:
-
-```promql
-rate(published_messages_by_client_total[5m])
-```
-
-Track message sizes:
-
-```promql
-histogram_quantile(0.95, rate(published_message_size_bytes_bucket[5m]))
-```
-
 ### Trace Collection
 
 The P2P client includes built-in trace collection for performance analysis:
@@ -1300,9 +1395,9 @@ The P2P client includes built-in trace collection for performance analysis:
 **Output includes:**
 
 ```text
-[TRACE] OptimumP2P type=JOIN ts=2025-09-11T15:58:04.746971127+05:30 size=66B
-[TRACE] OptimumP2P type=SEND_RPC ts=2025-09-11T15:58:04.73762546+05:30 size=114B
-[TRACE] OptimumP2P type=GRAFT ts=2025-09-11T15:58:28.517443638+05:30 size=106B
+[TRACE] mump2p type=JOIN ts=2025-09-11T15:58:04.746971127+05:30 size=66B
+[TRACE] mump2p type=SEND_RPC ts=2025-09-11T15:58:04.73762546+05:30 size=114B
+[TRACE] mump2p type=GRAFT ts=2025-09-11T15:58:28.517443638+05:30 size=106B
 Recv message: [1] [1757579641382484000 126] [1757579641203739000 100] Hello World
 ```
 
@@ -1391,35 +1486,12 @@ Check service logs for detailed debugging:
 # Proxy logs
 docker logs optimum-dev-setup-guide-proxy-1-1
 
-# P2P node logs  
+# P2P node logs
 docker logs optimum-dev-setup-guide-p2pnode-1-1
 
 # All services
 docker-compose -f docker-compose-optimum.yml logs -f
-```---
-
-## Production Considerations
-
-### Security
-
-- ✅ Enable JWT authentication in production
-- ✅ Use proper Auth0 configuration with rate limits
-- ✅ Implement proper firewall rules
-- ✅ Use TLS for all external communications
-
-### Scalability
-
-- ✅ Proxies are stateless and horizontally scalable
-- ✅ Add more P2P nodes for increased mesh resilience
-- ✅ Configure load balancing for proxy endpoints
-- ✅ Monitor metrics and adjust thresholds based on network conditions
-
-### Monitoring
-
-- ✅ Set up Prometheus monitoring for all metrics
-- ✅ Configure alerting for service health
-- ✅ Track message delivery rates and latencies
-- ✅ Monitor P2P mesh connectivity
+```
 
 ---
 
@@ -1428,18 +1500,22 @@ docker-compose -f docker-compose-optimum.yml logs -f
 ### CLI Integration
 
 For production-ready CLI interaction, see:
-- [mump2p-cli](https://github.com/getoptimum/mump2p-cli) - Full-featured CLI client
-- Supports JWT authentication, rate limiting, and advanced features
+- [mump2p-cli](https://github.com/getoptimum/mump2p-cli) - Full-featured CLI client with JWT authentication and rate limiting
 
 ### API Clients
 
-Example client implementations available in:
-- `grpc_proxy_client/` - Go gRPC client
-- `grpc_p2p_client/` - Go P2P direct client  
-- `scripts/` - Shell script wrappers
+Client implementations available in this repository:
+
+- **`grpc_proxy_client/`** - Go gRPC proxy client (`proxy_client.go`)
+- **`grpc_p2p_client/`** - Go P2P direct clients:
+  - `cmd/single/` - Single-node client (`p2p-client`)
+  - `cmd/multi-publish/` - Multi-node publisher (`p2p-multi-publish`)
+  - `cmd/multi-subscribe/` - Multi-node subscriber (`p2p-multi-subscribe`)
+  - `shared/` - Shared types and utilities
+- **`scripts/`** - Shell script wrappers
 
 ---
 
-*This development setup provides a complete OptimumP2P environment for testing, integration, and development. For production deployment, review the security and scalability considerations section.*
+*This development setup provides a complete mump2p environment for testing, integration, and development.*
 
 

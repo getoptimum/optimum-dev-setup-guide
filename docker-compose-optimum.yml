@@ -53,7 +53,7 @@ services:
       - SIDECAR_PORT=33212 # default port for sidecar is 33212 for the grpc bidirectional streaming for the proxy
       - API_PORT=9090 # default port for API is 9090
       - IDENTITY_DIR=/identity
-      #### configuration for optimumP2P  
+      #### configuration for mump2p  
       - NODE_MODE=optimum # options: "gossipsub", "optimum"
       - OPTIMUM_PORT=7070 # default port for Optimum is 7070
       - OPTIMUM_MAX_MSG_SIZE=1048576 # 1MB
@@ -83,7 +83,7 @@ services:
       - SIDECAR_PORT=33212 # default port for sidecar is 33212
       - API_PORT=9090 # default port for API is 9090
       - IDENTITY_DIR=/identity
-      #### configuration for optimumP2P
+      #### configuration for mump2p
       - NODE_MODE=optimum # options: "gossipsub", "optimum"
       - BOOTSTRAP_PEERS=/ip4/172.28.0.12/tcp/7070/p2p/${BOOTSTRAP_PEER_ID} # bootstrap from p2pnode-1
       - OPTIMUM_PORT=7070 # default port for Optimum is 7070
@@ -114,7 +114,7 @@ services:
       - SIDECAR_PORT=33212 # default port for sidecar is 33212
       - API_PORT=9090 # default port for API is 9090
       - IDENTITY_DIR=/identity
-      #### configuration for optimumP2P
+      #### configuration for mump2p
       - NODE_MODE=optimum # options: "gossipsub", "optimum"
       - OPTIMUM_PORT=7070 # default port for Optimum is 7070
       - OPTIMUM_MAX_MSG_SIZE=1048576 # default is 1MB
@@ -145,7 +145,7 @@ services:
       - SIDECAR_PORT=33212 # default port for sidecar is 33212
       - API_PORT=9090 # default port for API is 9090
       - IDENTITY_DIR=/identity
-      #### configuration for optimumP2P
+      #### configuration for mump2p
       - NODE_MODE=optimum # options: "gossipsub", "optimum"
       - OPTIMUM_PORT=7070 # default port for Optimum is 7070
       - OPTIMUM_MAX_MSG_SIZE=1048576 # 1MB
