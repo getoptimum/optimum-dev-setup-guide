@@ -1077,8 +1077,47 @@ Then publish to all nodes in the file:
 **Flags:**
 - `-topic`: Topic name to publish to (required)
 - `-ipfile`: File containing IP addresses, one per line (required)
+- `-start-index`: Starting index in IP file for selecting a subset of IPs (default: 0)
+- `-end-index`: Ending index in IP file (exclusive, default: 10000)
 - `-count`: Number of messages to publish per node (default: 1)
 - `-sleep`: Delay between messages (e.g., `500ms`, `1s`)
+
+**Index Range Selection (`-start-index` and `-end-index`):**
+
+These flags allow you to select a specific range of IP addresses from your IP file, which is useful when:
+- Testing with a subset of nodes from a large IP file
+- Running parallel tests across different IP ranges
+
+**How it works:**
+- Uses **zero-based indexing** (first IP is at index 0)
+- `-end-index` is **exclusive** (like Python slicing: `ips[start:end]`)
+- If your IP file has 10 IPs and you use `-start-index=0 -end-index=5`, it will use IPs at indices 0, 1, 2, 3, 4 (5 IPs total)
+- If `-end-index` exceeds the number of IPs in the file, it automatically caps to the file length
+- Both flags must be valid: `start-index >= 0`, `start-index < end-index`, and `start-index < total IPs`
+
+**Examples:**
+
+```sh
+# Publish to first 5 IPs (indices 0-4)
+./grpc_p2p_client/p2p-multi-publish \
+  -topic=test-topic \
+  -ipfile=ips.txt \
+  -start-index=0 \
+  -end-index=5 \
+  -count=10
+
+# Publish to IPs 10-19 (indices 10-19)
+./grpc_p2p_client/p2p-multi-publish \
+  -topic=test-topic \
+  -ipfile=ips.txt \
+  -start-index=10 \
+  -end-index=20 \
+  -count=10
+
+# If not specified, defaults to start-index=0, end-index=10000
+# (or file length if less than 10000 IPs)
+./grpc_p2p_client/p2p-multi-publish -topic=test-topic -ipfile=ips.txt
+```
 
 **Example Output:**
 ```
@@ -1111,10 +1150,12 @@ Subscribe to multiple nodes and collect messages:
 **Flags:**
 - `-topic`: Topic name to subscribe to (required)
 - `-ipfile`: File containing IP addresses, one per line (required)
-- `-start-index`: Starting index in IP file (default: 0)
-- `-end-index`: Ending index in IP file (default: 10000)
+- `-start-index`: Starting index in IP file for selecting a subset of IPs (default: 0)
+- `-end-index`: Ending index in IP file (exclusive, default: 10000)
 - `-output-data`: Output file for message data (TSV format: receiver, sender, size, sha256)
 - `-output-trace`: Output file for trace events (TSV format: type, peerID, receivedFrom, messageID, topic, timestamp)
+
+**Note:** The `-start-index` and `-end-index` flags work the same way as described in the Multi-Node Publisher Usage section above.
 
 **Example Output:**
 ```
