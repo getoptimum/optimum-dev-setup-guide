@@ -56,9 +56,10 @@ type ProxyInfo struct {
 	Error     string
 }
 
+var httpClient = &http.Client{Timeout: 5 * time.Second}
+
 func fetchJSON(url string, target interface{}) error {
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
@@ -212,20 +213,13 @@ func printDashboard(nodes []NodeInfo, proxies []ProxyInfo, nodeCountries *NodeCo
 	fmt.Println(strings.Repeat("=", 100))
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func main() {
 	var (
-		proxyURLs = flag.String("proxies", "", "Comma-separated list of proxy URLs (e.g., http://localhost:8081,http://localhost:8082)")
-		nodeURLs  = flag.String("nodes", "", "Comma-separated list of node URLs (e.g., http://localhost:9091,http://localhost:9092)")
-		proxyBase = flag.String("proxy-base", "", "Base URL for proxies (e.g., http://localhost) - will append :8081,:8082")
-		nodeBase  = flag.String("node-base", "", "Base URL for nodes (e.g., http://localhost) - will append :9091,:9092,:9093,:9094")
-		local     = flag.Bool("local", false, "Use localhost defaults (proxies: 8081,8082; nodes: 9091-9094)")
+		proxyURLsFlag = flag.String("proxies", "", "Comma-separated list of proxy URLs (e.g., http://localhost:8081,http://localhost:8082)")
+		nodeURLsFlag  = flag.String("nodes", "", "Comma-separated list of node URLs (e.g., http://localhost:9091,http://localhost:9092)")
+		proxyBase     = flag.String("proxy-base", "", "IP(s) or URL(s) for remote proxies - will prepend http:// and append :8080")
+		nodeBase      = flag.String("node-base", "", "IP(s) or URL(s) for remote nodes (optional) - will prepend http:// and append :8081")
+		local         = flag.Bool("local", false, "Use localhost defaults (proxies: 8081,8082; nodes: 9091-9094)")
 	)
 	flag.Parse()
 
@@ -233,23 +227,29 @@ func main() {
 	var nodes []NodeInfo
 
 	if *local {
-		proxyURLs := []string{"http://localhost:8081", "http://localhost:8082"}
-		for i, url := range proxyURLs {
+		proxyAddrs := []string{"http://localhost:8081", "http://localhost:8082"}
+		for i, url := range proxyAddrs {
 			proxies = append(proxies, fetchProxyInfo(fmt.Sprintf("proxy-%d", i+1), url))
 		}
-		nodeURLs := []string{"http://localhost:9091", "http://localhost:9092", "http://localhost:9093", "http://localhost:9094"}
-		for i, url := range nodeURLs {
+		nodeAddrs := []string{"http://localhost:9091", "http://localhost:9092", "http://localhost:9093", "http://localhost:9094"}
+		for i, url := range nodeAddrs {
 			nodes = append(nodes, fetchNodeInfo(fmt.Sprintf("p2pnode-%d", i+1), url))
 		}
 	} else if *proxyBase != "" {
-		ports := []string{":8080"}
-		for i, port := range ports {
-			url := *proxyBase + port
-			proxies = append(proxies, fetchProxyInfo(fmt.Sprintf("proxy-%d", i+1), url))
+		bases := strings.Split(*proxyBase, ",")
+		for i, base := range bases {
+			base = strings.TrimSpace(base)
+			if base == "" {
+				continue
+			}
+			if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
+				base = "http://" + base
+			}
+			url := base + ":8080"
 			proxies = append(proxies, fetchProxyInfo(fmt.Sprintf("proxy-%d", i+1), url))
 		}
-	} else if *proxyURLs != "" {
-		urls := strings.Split(*proxyURLs, ",")
+	} else if *proxyURLsFlag != "" {
+		urls := strings.Split(*proxyURLsFlag, ",")
 		for i, url := range urls {
 			url = strings.TrimSpace(url)
 			if url == "" {
@@ -260,13 +260,20 @@ func main() {
 	}
 
 	if *nodeBase != "" {
-		ports := []string{":8081"}
-		for i, port := range ports {
-			url := *nodeBase + port
+		bases := strings.Split(*nodeBase, ",")
+		for i, base := range bases {
+			base = strings.TrimSpace(base)
+			if base == "" {
+				continue
+			}
+			if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
+				base = "http://" + base
+			}
+			url := base + ":8081"
 			nodes = append(nodes, fetchNodeInfo(fmt.Sprintf("p2pnode-%d", i+1), url))
 		}
-	} else if *nodeURLs != "" {
-		urls := strings.Split(*nodeURLs, ",")
+	} else if *nodeURLsFlag != "" {
+		urls := strings.Split(*nodeURLsFlag, ",")
 		for i, url := range urls {
 			url = strings.TrimSpace(url)
 			if url == "" {
@@ -277,7 +284,7 @@ func main() {
 	}
 
 	if len(proxies) == 0 && len(nodes) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: No proxies or nodes specified. Use -local, -proxy-base/-node-base, or -proxies/-nodes flags.\n")
+		fmt.Fprintf(os.Stderr, "Error: No proxies or nodes specified. Use -local, -proxy-base, or -proxies/-nodes flags.\n")
 		flag.Usage()
 		os.Exit(1)
 	}

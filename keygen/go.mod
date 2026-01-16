@@ -1,6 +1,6 @@
 module p2p-keygen
 
-go 1.24.1
+go 1.25.5
 
 require (
 	github.com/benbjohnson/clock v1.3.0 // indirect

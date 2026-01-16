@@ -1,6 +1,6 @@
 module p2p_client
 
-go 1.24.1
+go 1.25.5
 
 require (
 	github.com/gogo/protobuf v1.3.2
