@@ -6,12 +6,13 @@ IDENTITY_DIR := ./identity
 P2P_CLIENT := $(P2P_CLIENT_DIR)/p2p-client
 PROXY_CLIENT := $(PROXY_CLIENT_DIR)/proxy-client
 KEYGEN_BINARY := keygen/generate-p2p-key
+DASHBOARD_BINARY := tools/network-dashboard/network-dashboard
 
 # Scripts
 SCRIPTS := ./script/generate-identity.sh ./script/proxy_client.sh ./test_suite.sh
 
 # Helper targets (not shown in help)
-.PHONY: $(P2P_CLIENT) $(PROXY_CLIENT) $(KEYGEN_BINARY) setup-scripts
+.PHONY: $(P2P_CLIENT) $(PROXY_CLIENT) $(KEYGEN_BINARY) $(DASHBOARD_BINARY) setup-scripts
 
 $(P2P_CLIENT):
 	@cd $(P2P_CLIENT_DIR) && go build -o p2p-client ./cmd/single/
@@ -23,6 +24,9 @@ $(PROXY_CLIENT):
 
 $(KEYGEN_BINARY):
 	@cd keygen && go build -o generate-p2p-key ./generate_p2p_key.go
+
+$(DASHBOARD_BINARY):
+	@cd tools/network-dashboard && go build -o network-dashboard .
 
 setup-scripts:
 	@chmod +x $(SCRIPTS)
@@ -41,8 +45,7 @@ help: ## Show help
 	@echo "  # Publish multiple messages with options"
 	@echo "  $(P2P_CLIENT) -mode=publish -topic=\"testtopic\" -msg=\"Random Message\" --addr=\"127.0.0.1:33221\" -count=10 -sleep=1s"
 
-build: $(P2P_CLIENT) $(PROXY_CLIENT) ## Build all client binaries
-	@echo "All clients built successfully"
+build: $(P2P_CLIENT) $(PROXY_CLIENT) $(DASHBOARD_BINARY) ## Build all client binaries
 
 generate-identity: ## Generate P2P identity (if missing)
 	@mkdir -p $(IDENTITY_DIR)
@@ -86,60 +89,64 @@ publish: $(P2P_CLIENT) generate-identity ## publish message to p2p topic: make p
 		extra_args="$$extra_args -sleep=$$sleep_val"; \
 	fi; \
 	if [ "$$message" = "random" ]; then \
-		echo "Publishing random messages to topic=$$topic addr=$$addr count=$${count:-1} sleep=$${sleep:-default}"; \
 		$(P2P_CLIENT) -mode=publish -topic="$$topic" -msg="random" --addr="$$addr" $$extra_args; \
 	else \
-		echo "Publishing message '$$message' to topic=$$topic addr=$$addr"; \
 		$(P2P_CLIENT) -mode=publish -topic="$$topic" -msg="$$message" --addr="$$addr" $$extra_args; \
 	fi
 
 test: $(P2P_CLIENT) $(PROXY_CLIENT) $(KEYGEN_BINARY) ## Run tests for Go clients
-	@echo "All Go clients built successfully"
 
 lint: ## Run golangci-lint
-	@echo "Running golangci-lint..."
 	@cd $(P2P_CLIENT_DIR) && golangci-lint run --skip-dirs-use-default || echo "Linting issues found in P2P client"
 	@cd $(PROXY_CLIENT_DIR) && golangci-lint run --skip-dirs-use-default || echo "Linting issues found in Proxy client"
 	@cd keygen && golangci-lint run --skip-dirs-use-default || echo "Linting issues found in Keygen"
-	@echo "Linting completed"
 
 test-docker: setup-scripts ## Test Docker Compose setup
-	@echo "Testing Docker Compose setup..."
 	@./script/generate-identity.sh
 	@docker-compose -f docker-compose-optimum.yml up --build -d
 	# Alternative: Use GossipSub protocol instead
 	# @docker-compose -f docker-compose-gossipsub.yml up --build -d
-	@echo "Waiting for services to be ready..."
 	@sleep 30
 	@docker-compose -f docker-compose-optimum.yml ps
-	@echo "Running test suite..."
 	@./test_suite.sh
-	@echo "Docker setup test completed"
 
 test-scripts: setup-scripts ## Test shell scripts
-	@echo "Script tests completed"
 
 validate: ## Validate configuration files
-	@echo "Validating configuration files..."
 	@docker-compose -f docker-compose-optimum.yml config
 	# Alternative: Validate GossipSub configuration instead
 	# @docker-compose -f docker-compose-gossipsub.yml config
 	@cd $(P2P_CLIENT_DIR) && go mod verify
 	@cd $(PROXY_CLIENT_DIR) && go mod verify
 	@cd keygen && go mod verify
-	@echo "Configuration validation completed"
 
 ci: test lint test-docker test-scripts validate ## Run all CI checks locally
-	@echo "All CI checks passed!"
+
+dashboard: $(DASHBOARD_BINARY) ## Show network health dashboard: make dashboard [local|remote] [proxy-base=URL] [node-base=URL]
+	@set -e; \
+	mode="$(word 2,$(MAKECMDGOALS))"; \
+	proxy_base="$(proxy-base)"; \
+	node_base="$(node-base)"; \
+	if [ -z "$$mode" ] || [ "$$mode" = "local" ]; then \
+		$(DASHBOARD_BINARY) -local; \
+	elif [ "$$mode" = "remote" ]; then \
+		args=""; \
+		if [ -n "$$proxy_base" ]; then args="$$args -proxy-base=$$proxy_base"; fi; \
+		if [ -n "$$node_base" ]; then args="$$args -node-base=$$node_base"; fi; \
+		if [ -z "$$args" ]; then \
+			exit 1; \
+		fi; \
+		$(DASHBOARD_BINARY) $$args; \
+	else \
+		exit 1; \
+	fi
 
 clean: ## Clean build artifacts
-	@echo "Cleaning build artifacts..."
-	@rm -f $(P2P_CLIENT) $(PROXY_CLIENT) $(KEYGEN_BINARY)
-	@echo "Clean complete!"
+	@rm -f $(P2P_CLIENT) $(PROXY_CLIENT) $(KEYGEN_BINARY) $(DASHBOARD_BINARY)
 
 # Prevent make from interpreting arguments as targets
 %:
 	@:
 
 .DEFAULT_GOAL := help
-.PHONY: help build generate-identity subscribe publish test lint test-docker test-scripts validate ci clean setup-scripts
+.PHONY: help build generate-identity subscribe publish test lint test-docker test-scripts validate ci clean setup-scripts dashboard
