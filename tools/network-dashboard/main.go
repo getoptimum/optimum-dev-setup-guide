@@ -13,21 +13,17 @@ import (
 
 type NodeHealth struct {
 	Status     string `json:"status"`
-	Mode       string `json:"mode,omitempty"`
 	CPUUsed    string `json:"cpu_used"`
 	MemoryUsed string `json:"memory_used"`
 	DiskUsed   string `json:"disk_used"`
 	Country    string `json:"country"`
-	CountryISO string `json:"country_iso"`
 }
 
 type NodeState struct {
-	PubKey     string   `json:"pub_key"`
-	Peers      []string `json:"peers"`
-	Addresses  []string `json:"addresses"`
-	Topics     []string `json:"topics"`
-	Country    string   `json:"country"`
-	CountryISO string   `json:"country_iso"`
+	PubKey    string   `json:"pub_key"`
+	Peers     []string `json:"peers"`
+	Addresses []string `json:"addresses"`
+	Topics    []string `json:"topics"`
 }
 
 type ProxyHealth struct {
@@ -36,13 +32,11 @@ type ProxyHealth struct {
 	MemoryUsed string `json:"memory_used"`
 	DiskUsed   string `json:"disk_used"`
 	Country    string `json:"country"`
-	CountryISO string `json:"country_iso"`
 }
 
 type NodeCountries struct {
-	Countries   map[string]string `json:"countries"`
-	CountryISOs map[string]string `json:"country_isos"`
-	Count       int               `json:"count"`
+	Countries map[string]string `json:"countries"`
+	Count     int               `json:"count"`
 }
 
 type NodeInfo struct {
@@ -251,6 +245,7 @@ func main() {
 		ports := []string{":8080"}
 		for i, port := range ports {
 			url := *proxyBase + port
+			proxies = append(proxies, fetchProxyInfo(fmt.Sprintf("proxy-%d", i+1), url))
 			proxies = append(proxies, fetchProxyInfo(fmt.Sprintf("proxy-%d", i+1), url))
 		}
 	} else if *proxyURLs != "" {
