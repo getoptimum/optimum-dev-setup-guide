@@ -1,8 +1,8 @@
 name: CI
 
 env:
-  go-version: "1.24.1"
-  lint-version: "v2.0.1"
+  go-version: "1.25.5"
+  lint-version: "v2.8.0"
 
 on:
   push:
@@ -36,16 +36,19 @@ jobs:
         run: |
           cd grpc_proxy_client
           go build -o proxy-client ./proxy_client.go
+          echo "Proxy client built successfully"
       
       - name: Build Key Generator
         run: |
           cd keygen
           go build -o generate-p2p-key ./generate_p2p_key.go
+          echo "Key generator built successfully"
       
       - name: Test Key Generation
         run: |
           cd keygen
           go run ./generate_p2p_key.go
+          echo "Key generation test passed"
 
   # Lint Go code
   golangci:

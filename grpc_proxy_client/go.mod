@@ -1,6 +1,6 @@
 module proxy_client
 
-go 1.24.1
+go 1.25.5
 
 require (
 	google.golang.org/grpc v1.73.0

@@ -19,3 +19,6 @@ grpc_p2p_client/remote-ips.txt
 *.txt
 *.tsv
 !grpc_p2p_client/local.ips.tsv
+
+# Log files
+*.log
