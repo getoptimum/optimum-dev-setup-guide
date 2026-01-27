@@ -69,7 +69,7 @@ func main() {
 	if *output != "" {
 		done = make(chan bool)
 		go func() {
-			header := fmt.Sprintf("sender\tsize\tsha256(msg)")
+			header := "sender\tsize\tsha256(msg)"
 			go shared.WriteToFile(ctx, dataCh, done, *output, header)
 		}()
 	}
@@ -90,31 +90,33 @@ func main() {
 }
 
 func sendMessages(ctx context.Context, ip string, datasize int, write bool, dataCh chan<- string) error {
+	// Create connection once and reuse for all messages
+	conn, err := grpc.NewClient(ip,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(math.MaxInt),
+			grpc.MaxCallSendMsgSize(math.MaxInt),
+		),
+	)
+	if err != nil {
+		return fmt.Errorf("[%s] failed to connect to node: %w", ip, err)
+	}
+	defer conn.Close()
+
+	client := protobuf.NewCommandStreamClient(conn)
+	stream, err := client.ListenCommands(ctx)
+	if err != nil {
+		return fmt.Errorf("[%s] ListenCommands failed: %w", ip, err)
+	}
+
+	println(fmt.Sprintf("Connected to node at: %s…", ip))
+
 	for i := 0; i < *count; i++ {
 		select {
 		case <-ctx.Done():
 			log.Printf("[%s] context canceled, stopping", ip)
 			return ctx.Err()
 		default:
-		}
-
-		conn, err := grpc.NewClient(ip,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithDefaultCallOptions(
-				grpc.MaxCallRecvMsgSize(math.MaxInt),
-				grpc.MaxCallSendMsgSize(math.MaxInt),
-			),
-		)
-		if err != nil {
-			log.Fatalf("failed to connect to node %v", err)
-		}
-		println(fmt.Sprintf("Connected to node at: %s…", ip))
-
-		client := protobuf.NewCommandStreamClient(conn)
-		stream, err := client.ListenCommands(ctx)
-
-		if err != nil {
-			log.Fatalf("ListenCommands: %v", err)
 		}
 
 		start := time.Now()
@@ -154,8 +156,6 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		} else {
 			time.Sleep(*sleep)
 		}
-
-		conn.Close()
 	}
 
 	return nil
