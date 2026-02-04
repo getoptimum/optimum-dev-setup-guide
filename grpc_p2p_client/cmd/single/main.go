@@ -34,7 +34,7 @@ var (
 func main() {
 	flag.Parse()
 	if *topic == "" {
-		log.Fatalf("−topic is required")
+		log.Fatal("-topic is required")
 	}
 
 	println(fmt.Sprintf("Connecting to node at: %s…", *addr))
@@ -89,38 +89,22 @@ func subscribe(ctx context.Context, stream protobuf.CommandStream_ListenCommands
 	fmt.Printf("Subscribed to topic %q, waiting for messages…\n", topic)
 
 	var receivedCount int32
-	msgChan := make(chan *protobuf.Response, 10000)
-
-	go func() {
-		for {
-			resp, err := stream.Recv()
-			if err == io.EOF {
-				close(msgChan)
-				return
-			}
-			if err != nil {
-				log.Printf("recv error: %v", err)
-				close(msgChan)
-				return
-			}
-			msgChan <- resp
-		}
-	}()
-
 	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("Context canceled. Total messages received: %d", atomic.LoadInt32(&receivedCount))
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			log.Printf("Stream closed. Total messages received: %d", atomic.LoadInt32(&receivedCount))
 			return
-		case resp, ok := <-msgChan:
-			if !ok {
-				log.Printf("Stream closed. Total messages received: %d", atomic.LoadInt32(&receivedCount))
+		}
+		if err != nil {
+			if ctx.Err() != nil {
+				log.Printf("Context canceled. Total messages received: %d", atomic.LoadInt32(&receivedCount))
 				return
 			}
-			go func(resp *protobuf.Response) {
-				shared.HandleResponse(resp, &receivedCount)
-			}(resp)
+			log.Printf("recv error: %v", err)
+			return
 		}
+
+		shared.HandleResponse(resp, &receivedCount)
 	}
 }
 
@@ -128,7 +112,7 @@ func publish(ctx context.Context, stream protobuf.CommandStream_ListenCommandsCl
 	topic, msg string, count int, sleep time.Duration) {
 
 	if msg == "" && count == 1 {
-		log.Fatalf("−msg is required in publish mode")
+		log.Fatal("-msg is required in publish mode")
 	}
 
 	for i := 0; i < count; i++ {

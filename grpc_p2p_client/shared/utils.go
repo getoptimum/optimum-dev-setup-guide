@@ -23,6 +23,10 @@ import (
 )
 
 func ReadIPsFromFile(filename string) ([]string, error) {
+	if strings.TrimSpace(filename) == "" {
+		return nil, fmt.Errorf("-ipfile is required")
+	}
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
@@ -215,6 +219,7 @@ func WriteToFile(ctx context.Context, dataCh <-chan string, done chan<- bool, fi
 		log.Fatal(err)
 	}
 	defer file.Close()
+	defer close(done)
 
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
@@ -226,18 +231,23 @@ func WriteToFile(ctx context.Context, dataCh <-chan string, done chan<- bool, fi
 		}
 	}
 
-	for data := range dataCh {
+	ctxDone := ctx.Done()
+	for {
 		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-		_, err := writer.WriteString(data + "\n")
-		writer.Flush()
-		if err != nil {
-			log.Printf("Write error: %v", err)
+		case <-ctxDone:
+			// Continue draining channel so producers don't block on shutdown.
+			ctxDone = nil
+		case data, ok := <-dataCh:
+			if !ok {
+				fmt.Println("All data flushed to disk")
+				return
+			}
+
+			_, err := writer.WriteString(data + "\n")
+			writer.Flush()
+			if err != nil {
+				log.Printf("Write error: %v", err)
+			}
 		}
 	}
-	done <- true
-	fmt.Println("All data flushed to disk")
 }

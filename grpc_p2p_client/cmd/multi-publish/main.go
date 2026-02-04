@@ -38,7 +38,13 @@ var (
 func main() {
 	flag.Parse()
 	if *topic == "" {
-		log.Fatalf("−topic is required")
+		log.Fatal("-topic is required")
+	}
+	if *count < 1 {
+		log.Fatal("-count must be >= 1")
+	}
+	if *dataSize < 1 {
+		log.Fatal("-datasize must be >= 1")
 	}
 
 	_ips, err := shared.ReadIPsFromFile(*ipfile)
@@ -48,6 +54,10 @@ func main() {
 	}
 	fmt.Printf("numip %d  index %d\n", len(_ips), *endIdx)
 	*endIdx = min(len(_ips), *endIdx)
+	if *startIdx < 0 || *startIdx >= *endIdx || *startIdx >= len(_ips) {
+		log.Fatalf("invalid index range: start-index=%d end-index=%d (num IPs=%d)", *startIdx, *endIdx, len(_ips))
+	}
+
 	ips := _ips[*startIdx:*endIdx]
 	fmt.Printf("Found %d IPs: %v\n", len(ips), ips)
 
@@ -62,30 +72,41 @@ func main() {
 	}()
 
 	dataCh := make(chan string, 100)
-	*dataSize = int(float32(*dataSize) / 2.0)
+	randomByteLen := max(1, *dataSize/2)
 	var done chan bool
 	var wg sync.WaitGroup
+	errCh := make(chan error, len(ips))
 
 	if *output != "" {
 		done = make(chan bool)
-		go func() {
-			header := "sender\tsize\tsha256(msg)"
-			go shared.WriteToFile(ctx, dataCh, done, *output, header)
-		}()
+		header := "sender\tsize\tsha256(msg)"
+		go shared.WriteToFile(ctx, dataCh, done, *output, header)
 	}
 
 	for _, ip := range ips {
 		wg.Add(1)
 		go func(ip string) {
 			defer wg.Done()
-			datasize := *dataSize
-			sendMessages(ctx, ip, datasize, *output != "", dataCh)
+			if err := sendMessages(ctx, ip, randomByteLen, *output != "", dataCh); err != nil {
+				errCh <- err
+				cancel()
+			}
 		}(ip)
 	}
 	wg.Wait()
+	close(errCh)
 	close(dataCh)
 	if done != nil {
 		<-done
+	}
+
+	hasErrors := false
+	for err := range errCh {
+		hasErrors = true
+		log.Printf("publish worker error: %v", err)
+	}
+	if hasErrors {
+		os.Exit(1)
 	}
 }
 
@@ -114,8 +135,7 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 	for i := 0; i < *count; i++ {
 		select {
 		case <-ctx.Done():
-			log.Printf("[%s] context canceled, stopping", ip)
-			return ctx.Err()
+			return nil
 		default:
 		}
 
@@ -136,17 +156,15 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		if err := stream.Send(pubReq); err != nil {
 			return fmt.Errorf("[%s] send publish: %w", ip, err)
 		}
-		fmt.Printf("Published data size  %d\n", len(data))
 
 		elapsed := time.Since(start)
 		hash := sha256.Sum256(data)
 		hexHashString := hex.EncodeToString(hash[:])
-		var dataToSend string
 		if write {
-			dataToSend = fmt.Sprintf("%s\t%d\t%s", ip, len(data), hexHashString)
+			dataToSend := fmt.Sprintf("%s\t%d\t%s", ip, len(data), hexHashString)
 			dataCh <- dataToSend
 		}
-		fmt.Printf("Published %s to %q (took %v)\n", dataToSend, *topic, elapsed)
+		fmt.Printf("[%s] published %d bytes to %q (took %v)\n", ip, len(data), *topic, elapsed)
 
 		if *poisson {
 			lambda := 1.0 / (*sleep).Seconds()
