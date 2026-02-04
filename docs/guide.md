@@ -1059,7 +1059,7 @@ For testing and stress testing across multiple P2P nodes simultaneously, the pro
 
 Publish messages to multiple nodes simultaneously:
 
-Create a text file (`ips.txt`) with IP addresses, one per line:
+Create a text file (`ips.txt`) with IP addresses, one per line. For the Docker Compose stack, host ports are 33221–33224:
 
 ```
 localhost:33221
@@ -1079,7 +1079,8 @@ Then publish to all nodes in the file:
 - `-ipfile`: File containing IP addresses, one per line (required)
 - `-start-index`: Starting index in IP file for selecting a subset of IPs (default: 0)
 - `-end-index`: Ending index in IP file (exclusive, default: 10000)
-- `-count`: Number of messages to publish per node (default: 1)
+- `-count`: Number of messages to publish per node (default: 1, must be >= 1)
+- `-datasize`: Size in bytes of random message payload (default: 100, must be >= 1)
 - `-sleep`: Delay between messages (e.g., `500ms`, `1s`)
 
 **Index Range Selection (`-start-index` and `-end-index`):**
@@ -1136,7 +1137,7 @@ Published to "test-topic" (took 263.709µs)
 Subscribe to multiple nodes and collect messages:
 
 ```sh
-# Subscribe to all nodes in the file
+# Subscribe to all nodes in the file (Docker: use ips with ports 33221–33224, start-index=0, end-index=4)
 ./grpc_p2p_client/p2p-multi-subscribe -topic=test-topic -ipfile=ips.txt
 
 # With output files for data analysis
