@@ -111,12 +111,14 @@ make publish 127.0.0.1:33221 testtopic random 10 1s
 
 **Multi-Node Clients (for stress testing):**
 
+For the Docker Compose stack, P2P sidecar ports on the host are 33221–33224. Use an `ips.txt` with those addresses and `-start-index=0 -end-index=4` for four nodes:
+
 ```sh
 # Publish to multiple nodes simultaneously
-./grpc_p2p_client/p2p-multi-publish -topic=testtopic -ipfile=ips.txt -count=10 -sleep=500ms
+./grpc_p2p_client/p2p-multi-publish -topic=testtopic -ipfile=ips.txt -count=10 -start-index=0 -end-index=4 -sleep=500ms
 
-# Subscribe to multiple nodes and collect data
-./grpc_p2p_client/p2p-multi-subscribe -topic=testtopic -ipfile=ips.txt -output-data=data.tsv
+# Subscribe to multiple nodes (run in one terminal)
+./grpc_p2p_client/p2p-multi-subscribe -topic=testtopic -ipfile=ips.txt -start-index=0 -end-index=4
 ```
 
 See the [Complete Setup Guide](./docs/guide.md#multi-node-client-tools) for detailed multi-node client usage.

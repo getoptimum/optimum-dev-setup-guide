@@ -32,7 +32,7 @@ var (
 func main() {
 	flag.Parse()
 	if *topic == "" {
-		log.Fatalf("−topic is required")
+		log.Fatal("-topic is required")
 	}
 
 	_ips, err := shared.ReadIPsFromFile(*ipfile)
@@ -63,33 +63,34 @@ func main() {
 	traceCh := make(chan string, 100)
 	var dataDone chan bool
 	var traceDone chan bool
+	errCh := make(chan error, len(ips))
 
 	var wg sync.WaitGroup
 	if *outputData != "" {
 		dataDone = make(chan bool)
-		go func() {
-			header := "receiver\tsender\tsize\tsha256(msg)"
-			go shared.WriteToFile(ctx, dataCh, dataDone, *outputData, header)
-		}()
+		header := "receiver\tsender\tsize\tsha256(msg)"
+		go shared.WriteToFile(ctx, dataCh, dataDone, *outputData, header)
 	}
 
 	if *outputTrace != "" {
 		traceDone = make(chan bool)
-		go func() {
-			header := ""
-			go shared.WriteToFile(ctx, traceCh, traceDone, *outputTrace, header)
-		}()
+		header := ""
+		go shared.WriteToFile(ctx, traceCh, traceDone, *outputTrace, header)
 	}
 
 	for _, ip := range ips {
 		wg.Add(1)
 		go func(ip string) {
 			defer wg.Done()
-			receiveMessages(ctx, ip, *outputData != "", dataCh, *outputTrace != "", traceCh)
+			if err := receiveMessages(ctx, ip, *outputData != "", dataCh, *outputTrace != "", traceCh); err != nil {
+				errCh <- err
+				cancel()
+			}
 		}(ip)
 	}
 
 	wg.Wait()
+	close(errCh)
 	close(dataCh)
 	close(traceCh)
 	if dataDone != nil {
@@ -97,6 +98,15 @@ func main() {
 	}
 	if traceDone != nil {
 		<-traceDone
+	}
+
+	hasErrors := false
+	for err := range errCh {
+		hasErrors = true
+		log.Printf("subscribe worker error: %v", err)
+	}
+	if hasErrors {
+		os.Exit(1)
 	}
 }
 
@@ -106,7 +116,7 @@ func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan
 	select {
 	case <-ctx.Done():
 		log.Printf("[%s] context canceled, stopping", ip)
-		return ctx.Err()
+		return nil
 	default:
 	}
 
@@ -145,37 +155,20 @@ func receiveMessages(ctx context.Context, ip string, writeData bool, dataCh chan
 	fmt.Printf("Subscribed to topic %q, waiting for messages…\n", *topic)
 
 	var receivedCount int32
-	msgChan := make(chan *protobuf.Response, 10000)
-
-	go func() {
-		for {
-			resp, err := stream.Recv()
-			if err == io.EOF {
-				close(msgChan)
-				return
-			}
-			if err != nil {
-				log.Printf("recv error: %v", err)
-				close(msgChan)
-				return
-			}
-			msgChan <- resp
-		}
-	}()
-
 	for {
-		select {
-		case <-ctx.Done():
-			log.Printf("Context canceled. Total messages received: %d", atomic.LoadInt32(&receivedCount))
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			log.Printf("[%s] stream closed. Total messages received: %d", ip, atomic.LoadInt32(&receivedCount))
 			return nil
-		case resp, ok := <-msgChan:
-			if !ok {
-				log.Printf("Stream closed. Total messages received: %d", atomic.LoadInt32(&receivedCount))
+		}
+		if err != nil {
+			if ctx.Err() != nil {
+				log.Printf("[%s] context canceled. Total messages received: %d", ip, atomic.LoadInt32(&receivedCount))
 				return nil
 			}
-			go func(resp *protobuf.Response) {
-				shared.HandleResponseWithTracking(ip, resp, &receivedCount, writeData, dataCh, writeTrace, traceCh)
-			}(resp)
+			return fmt.Errorf("[%s] recv error: %w", ip, err)
 		}
+
+		shared.HandleResponseWithTracking(ip, resp, &receivedCount, writeData, dataCh, writeTrace, traceCh)
 	}
 }
