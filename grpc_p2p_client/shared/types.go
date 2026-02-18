@@ -8,6 +8,15 @@ type P2PMessage struct {
 	SourceNodeID string
 }
 
+type Message struct {
+	Topic string `json:"topic"`
+	Msg   []byte `json:"msg"`
+}
+
+type MessageBatch struct {
+	Messages []Message `json:"messages"`
+}
+
 // Command represents possible operations that sidecar may perform with p2p node
 type Command int32
 
@@ -16,4 +25,7 @@ const (
 	CommandPublishData
 	CommandSubscribeToTopic
 	CommandUnSubscribeToTopic
+	CommandSubscribeToTopics
+	CommandPublishRandomData
+	CommandPublishBatch
 )
