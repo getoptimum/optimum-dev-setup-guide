@@ -96,10 +96,17 @@ publish: $(P2P_CLIENT) generate-identity ## publish message to p2p topic: make p
 
 test: $(P2P_CLIENT) $(PROXY_CLIENT) $(KEYGEN_BINARY) ## Run tests for Go clients
 
-lint: ## Run golangci-lint
-	@cd $(P2P_CLIENT_DIR) && golangci-lint run --skip-dirs-use-default || echo "Linting issues found in P2P client"
-	@cd $(PROXY_CLIENT_DIR) && golangci-lint run --skip-dirs-use-default || echo "Linting issues found in Proxy client"
-	@cd keygen && golangci-lint run --skip-dirs-use-default || echo "Linting issues found in Keygen"
+GOLANGCI_LINT := $(shell command -v golangci-lint 2>/dev/null || echo "$(shell go env GOPATH)/bin/golangci-lint")
+
+install-lint: ## Install golangci-lint if not present
+	@command -v golangci-lint >/dev/null 2>&1 || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
+
+lint: install-lint ## Run golangci-lint
+	@cd $(P2P_CLIENT_DIR) && $(GOLANGCI_LINT) run || echo "Linting issues found in P2P client"
+	@cd $(PROXY_CLIENT_DIR) && $(GOLANGCI_LINT) run || echo "Linting issues found in Proxy client"
+	@cd keygen && $(GOLANGCI_LINT) run || echo "Linting issues found in Keygen"
+
+
 
 test-docker: setup-scripts ## Test Docker Compose setup
 	@./script/generate-identity.sh
@@ -149,4 +156,4 @@ clean: ## Clean build artifacts
 	@:
 
 .DEFAULT_GOAL := help
-.PHONY: help build generate-identity subscribe publish test lint test-docker test-scripts validate ci clean setup-scripts dashboard
+.PHONY: help build generate-identity subscribe publish test lint install-lint test-docker test-scripts validate ci clean setup-scripts dashboard
