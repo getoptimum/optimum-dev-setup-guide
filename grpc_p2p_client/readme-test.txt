@@ -122,3 +122,10 @@ receiver                sender          size    sha256(msg)
 
 3. Verify messages were received by checking the output files (test-outgoing.txt and test-incoming.txt)
 
+
+### Visualizing the equation propagation using RLNC
+Please view the PDF file "optimum-1-n-100_d-50_s-100_p-0.pdf-trace.pdf" in slideshow mode to visualize the RLNC 
+message propagation. In this trace, green nodes represent successful message decoding or the initial sender of the messager;
+ the light blue nodes means these nodes have not received any message (including equations); and the grey nodes 
+means show equations have been received but not sufficient to decode the message yet. The edges and labels indicate the specific
+ number of linear equations transmitted between respective nodes.
