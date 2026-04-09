@@ -57,8 +57,11 @@ var (
 
 func main() {
 	flag.Parse()
-	if *topic == "" {
-		log.Fatalf("−topic is required")
+
+        fmt.Printf("topic %v\n", *topic)
+        
+	if *topic == string("") {
+		log.Fatalf("option −topic is required")
 	}
 
 	_ips, err := readIPsFromFile(*ipfile)
@@ -250,15 +253,22 @@ func handleResponse(ip string, resp *protobuf.Response, counter *int32,
 
 		hash := sha256.Sum256(p2pMessage.Message)
 		hexHashString := hex.EncodeToString(hash[:])
+                _ = hexHashString
 
-		parts := strings.Split(string(p2pMessage.Message), "-")
-		if len(parts) > 0 {
-			publisher := parts[0]
-			var dataToSend string
-			if writedata == true {
-				dataToSend = fmt.Sprintf("%s\t%s\t%d\t%s", ip, publisher, len(p2pMessage.Message), hexHashString)
-				dataCh <- dataToSend
-			}
+//		parts := strings.Split(string(p2pMessage.Message), "-")
+/*/
+                publisher := ""
+		if len(parts) > 1 {
+		    publisher = parts[0]
+                }
+*/
+                fmt.Printf("size %v\n", len(resp.GetData()))
+		var dataToSend string
+		if writedata == true {
+			dataToSend = fmt.Sprintf("%s\t%d", ip, len(p2pMessage.Message))
+                        fmt.Printf("%s\n", dataToSend)
+			//dataToSend = fmt.Sprintf("%s\t%s\t%d\t%s", ip, publisher, len(p2pMessage.Message), hexHashString)
+			dataCh <- dataToSend
 		}
 
 		//fmt.Printf("Recv message: %s %d %s\n", ip,  messageSize, string(p2pMessage.Message))
