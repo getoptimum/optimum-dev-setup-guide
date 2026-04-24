@@ -130,6 +130,18 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		return fmt.Errorf("[%s] ListenCommands failed: %w", ip, err)
 	}
 
+	// Drain stream.Recv() to prevent gRPC flow control buffers from filling up.
+	// If we don't drain this, any pushed traces/responses from the server 
+	// will eventually block the server's stream sending, which in turn blocks us.
+	go func() {
+		for {
+			_, err := stream.Recv()
+			if err != nil {
+				return
+			}
+		}
+	}()
+
 	println(fmt.Sprintf("Connected to node at: %s…", ip))
 
 	for i := 0; i < *count; i++ {
