@@ -33,6 +33,7 @@ var (
 	startIdx = flag.Int("start-index", 0, "beginning index is 0: default 0")
 	endIdx   = flag.Int("end-index", 10000, "index-1")
 	output   = flag.String("output", "", "file to write the outgoing data hashes")
+	batch    = flag.Int("batch", 1, "number of messages to send per batch before sleeping")
 )
 
 func main() {
@@ -178,13 +179,15 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		}
 		fmt.Printf("[%s] published %d bytes to %q (took %v)\n", ip, len(data), *topic, elapsed)
 
-		if *poisson {
-			lambda := 1.0 / (*sleep).Seconds()
-			interval := mathrand.ExpFloat64() / lambda
-			waitTime := time.Duration(interval * float64(time.Second))
-			time.Sleep(waitTime)
-		} else {
-			time.Sleep(*sleep)
+		if (i+1)%(*batch) == 0 || i == *count-1 {
+			if *poisson {
+				lambda := 1.0 / (*sleep).Seconds()
+				interval := mathrand.ExpFloat64() / lambda
+				waitTime := time.Duration(interval * float64(time.Second))
+				time.Sleep(waitTime)
+			} else {
+				time.Sleep(*sleep)
+			}
 		}
 	}
 
