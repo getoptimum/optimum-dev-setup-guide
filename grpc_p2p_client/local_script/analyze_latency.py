@@ -53,6 +53,7 @@ def percentile(data, p):
 def main():
     parser = argparse.ArgumentParser(description="Calculate P2P Propagation Latency")
     parser.add_argument("--file", default="incoming-trace.tsv", help="Path to trace file")
+    parser.add_argument("--data-file", help="Path to data file (optional, will be archived along with trace)")
     parser.add_argument("--skip", type=int, default=5, help="Number of initial messages to skip (warm-up)")
     parser.add_argument("--msg-size", type=str, help="Message size for archiving (e.g., 900)")
     args = parser.parse_args()
@@ -73,10 +74,17 @@ def main():
             filename, ext = os.path.splitext(os.path.basename(args.file))
             new_path = os.path.join(archive_dir, f"{filename}-{timestamp}{ext}")
 
-            # Move file
+            # Move trace file
             shutil.move(args.file, new_path)
             print(f"Archived '{args.file}' to '{new_path}'")
             target_file = new_path
+
+            # Also move data file if provided
+            if args.data_file and os.path.exists(args.data_file):
+                data_filename, data_ext = os.path.splitext(os.path.basename(args.data_file))
+                new_data_path = os.path.join(archive_dir, f"{data_filename}-{timestamp}{data_ext}")
+                shutil.move(args.data_file, new_data_path)
+                print(f"Archived '{args.data_file}' to '{new_data_path}'")
         
         # Scenario B: Local file missing -> Look for latest by mtime in archive
         else:
@@ -174,6 +182,8 @@ def main():
     p99 = percentile(latencies, 99)
 
     print("\n=== P2P Network Propagation Latency Summary ===")
+    if args.msg_size:
+        print(f"Message Size (Payload)     : {args.msg_size} bytes")
     print(f"Sample Size (after filter) : {len(latencies)} messages")
     print(f"Mean Latency               : {mean_latency:.2f} ms")
     print(f"P50 Latency (Median)       : {p50:.2f} ms")
