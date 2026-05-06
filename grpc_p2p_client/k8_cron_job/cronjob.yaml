@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mump2p-load-test
+  namespace: default
+spec:
+  # Schedule to run, e.g., every day at midnight. Adjust as needed.
+  schedule: "0 0 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: mump2p-load-test
+            image: mump2p-load-test:latest
+            # Always pull the latest image if tag is latest
+            imagePullPolicy: Always
+            # Environment variables configuration for entrypoint.sh
+            env:
+            - name: TOPIC
+              value: "bnb-bench" # Required!
+            - name: BATCH
+              value: "1"
+            - name: SLEEP
+              value: "450ms"
+            - name: DATASIZE
+              value: "80000"
+            - name: COUNT
+              value: "4000"
+            - name: START_IDX
+              value: "0"
+            - name: END_IDX
+              value: "1"
+            - name: IPFILE
+              value: "/app/config/ip.p2pnode.bnb.tsv"
+            volumeMounts:
+            - name: p2p-ips
+              mountPath: /app/config
+              readOnly: true
+          restartPolicy: OnFailure
+          volumes:
+          - name: p2p-ips
+            configMap:
+              name: p2p-ip-config
