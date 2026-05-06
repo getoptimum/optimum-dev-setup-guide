@@ -1,7 +1,10 @@
 # ==============================================================================
 # Stage 1: Build the Go binaries
 # ==============================================================================
-FROM golang:latest AS builder
+FROM --platform=$BUILDPLATFORM golang:latest AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /src
 
@@ -11,9 +14,9 @@ RUN go mod download
 
 COPY . .
 
-# Build the Linux binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /p2p-multi-subscribe ./cmd/multi-subscribe
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /p2p-multi-publish ./cmd/multi-publish
+# Build the Linux binaries dynamically based on the target platform
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /p2p-multi-subscribe ./cmd/multi-subscribe
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /p2p-multi-publish ./cmd/multi-publish
 
 # ==============================================================================
 # Stage 2: Build the final Python image
