@@ -115,6 +115,18 @@ func publish(ctx context.Context, stream protobuf.CommandStream_ListenCommandsCl
 		log.Fatal("-msg is required in publish mode")
 	}
 
+	// Drain the response side of the bidi stream so the per-stream HTTP/2
+	// flow-control window does not fill up and block stream.Send. Without
+	// this drain a multi-message publish (-count >> 1 with large -msg)
+	// deadlocks after ~7-8 publications at payload sizes >=100KB.
+	go func() {
+		for {
+			if _, err := stream.Recv(); err != nil {
+				return
+			}
+		}
+	}()
+
 	for i := 0; i < count; i++ {
 		start := time.Now()
 		var data []byte

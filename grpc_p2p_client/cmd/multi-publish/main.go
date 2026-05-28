@@ -130,6 +130,19 @@ func sendMessages(ctx context.Context, ip string, datasize int, write bool, data
 		return fmt.Errorf("[%s] ListenCommands failed: %w", ip, err)
 	}
 
+	// Drain the response side of the bidi stream so the per-stream HTTP/2
+	// flow-control window does not fill up and block stream.Send. Without
+	// this drain the publisher deadlocks after ~7-8 publications at
+	// payload sizes >=100KB, because each publish triggers several
+	// trace-event Response messages from the server.
+	go func() {
+		for {
+			if _, err := stream.Recv(); err != nil {
+				return
+			}
+		}
+	}()
+
 	println(fmt.Sprintf("Connected to node at: %s…", ip))
 
 	for i := 0; i < *count; i++ {
