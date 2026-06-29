@@ -10,7 +10,7 @@ Ensure all your changes have been pushed to the `optimum-p2p` repository before 
 
 In the `optimum-proxy` repository, open `go.mod` and update the `require` section to reference the newly pushed version of `optimum-p2p`:
 
-```
+```go
 github.com/getoptimum/optimum-p2p <new-version>
 ```
 
@@ -28,18 +28,20 @@ go mod tidy
 From the `optimum-proxy` repository root, build the P2P binary:
 
 ```bash
-make p2p
+make build
 ```
 
 ---
 
 ## Step 4 — Deploy the Binary
 
-Move the compiled binary to the infrastructure repository:
+Move the compiled `p2p-client` binary to the infrastructure repository:
 
 ```bash
-mv ./p2p optimum-infra/optimump2p-native/data/p2pnode-rlnc-arch-test
+mv ./p2p-client optimum-infra/optimump2p-native/data/p2pnode-rlnc-arch-test
 ```
+
+Note: The build also produces `p2p-multi-publish` and `p2p-multi-subscribe` binaries, which are used for testing (see Step 8).
 
 ---
 
@@ -135,6 +137,7 @@ Connects to multiple P2P nodes and publishes messages to a specified topic.
 ### Examples
 
 **Basic** — publish 2 messages to the first 5 nodes:
+
 ```bash
 ./p2p-multi-publish \
   -count 2 -datasize 100 \
@@ -145,6 +148,7 @@ Connects to multiple P2P nodes and publishes messages to a specified topic.
 ```
 
 **Production** — publish 3 messages to 20 nodes:
+
 ```bash
 ./p2p-multi-publish \
   -count 3 -datasize 12222 \
@@ -158,7 +162,7 @@ Connects to multiple P2P nodes and publishes messages to a specified topic.
 
 The output file is tab-separated (TSV):
 
-```
+```tsv
 sender                  size    sha256(msg)
 34.127.26.15:33212      119     03fb89f1791f9bd70fa959a8acbae9dd...
 ```
@@ -189,6 +193,7 @@ Connects to multiple P2P nodes and listens for messages on a specified topic. Ru
 ### Examples
 
 **Basic** — subscribe on first 5 nodes:
+
 ```bash
 ./p2p-multi-subscribe \
   -end-index 5 \
@@ -198,6 +203,7 @@ Connects to multiple P2P nodes and listens for messages on a specified topic. Ru
 ```
 
 **Production** — subscribe on 20 nodes:
+
 ```bash
 ./p2p-multi-subscribe \
   -end-index 20 \
@@ -210,7 +216,7 @@ Connects to multiple P2P nodes and listens for messages on a specified topic. Ru
 
 The output file is tab-separated (TSV):
 
-```
+```tsv
 receiver                sender          size    sha256(msg)
 34.187.253.56:33212     [binary data]   12453   1b4bca4ab3703d64...
 ```
@@ -220,6 +226,7 @@ receiver                sender          size    sha256(msg)
 ## End-to-End Test
 
 **Terminal 1 — start the subscriber:**
+
 ```bash
 ./p2p-multi-subscribe \
   -end-index 5 \
@@ -229,6 +236,7 @@ receiver                sender          size    sha256(msg)
 ```
 
 **Terminal 2 — run the publisher:**
+
 ```bash
 ./p2p-multi-publish \
   -count 2 -datasize 100 \
